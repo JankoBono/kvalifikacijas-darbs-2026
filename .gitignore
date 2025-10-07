@@ -1,0 +1,26 @@
+# 1. Virtual Environment
+venv/
+env/
+
+# 2. Database
+db.sqlite3
+
+# 3. Compiled Python Files
+*.pyc
+__pycache__/
+
+# 4. Sensitive Data / Local Settings
+.env
+local_settings.py
+secrets.json
+
+# 5. User-Uploaded Files and Collected Static Files
+/media/
+/static/
+
+# 6. IDE and OS Files
+.DS_Store
+Thumbs.db
+*.bak
+.idea/
+.vscode/
