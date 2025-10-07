@@ -27,7 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-AUTH_USER_MODEL = 'baze.CustomUser'
 # Application definition
 
 INSTALLED_APPS = [

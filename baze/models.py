@@ -1,17 +1,24 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 
 # Create your models here.
 
-class CustomUser(AbstractUser):
-    vards = models.CharField(max_length=200)
-    uzvards = models.CharField(max_length=200)
-    veikals = models.CharField(max_length=200)
-    pass
+class Veikals(models.Model):
+    nosaukums = models.CharField(max_length=200, unique=True)
+    
+    def __str__(self):
+        return self.nosaukums   
 
+class UserVeikals(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    veikals = models.ForeignKey(Veikals, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return self.user.username
 
 class Plans(models.Model):
-    lietotajs = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     pieslegumi = models.IntegerField()
     iekartas = models.IntegerField()
     viedpaligi = models.IntegerField()
@@ -26,7 +33,7 @@ class Plans(models.Model):
         return self.menesis
 
 class Darijums(models.Model):
-    lietotajs = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     pieslegums = models.IntegerField()
     atv_iekarta = models.IntegerField()
     nom_iekarta = models.IntegerField()
