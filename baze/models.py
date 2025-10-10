@@ -34,15 +34,18 @@ class Plans(models.Model):
 
 class Darijums(models.Model):
     lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    pieslegums = models.IntegerField()
-    atv_iekarta = models.IntegerField()
-    nom_iekarta = models.IntegerField()
-    pil_iekarta = models.IntegerField()
-    viedpaligs = models.IntegerField()
-    apdr_iekartas = models.IntegerField()
-    aksesuars = models.IntegerField()
-    viedtelevizija = models.IntegerField()
+    pieslegums = models.IntegerField(null=True, blank=True)
+    atv_iekarta = models.IntegerField(null=True, blank=True)
+    nom_iekarta = models.IntegerField(null=True, blank=True)
+    pil_iekarta = models.IntegerField(null=True, blank=True)
+    viedpaligs = models.IntegerField(null=True, blank=True)
+    apdr_iekartas = models.IntegerField(null=True, blank=True)
+    aksesuars = models.IntegerField(null=True, blank=True)
+    viedtelevizija = models.IntegerField(null=True, blank=True)
     datums = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-datums']
 
     def __str__(self):
         return str(self.datums)

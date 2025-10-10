@@ -1,0 +1,18 @@
+{% extends 'main.html' %}
+
+{% block content %}
+<h1>Veikala pārvaldības sistēma</h1>
+<hr>
+<div>
+    <a href="{% url 'add-darijums' %}">Pievienot darījumu</a>
+    <div>
+        {% for darijums in darijumi %}
+        <div>
+            <span>{{darijums}}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+{% endblock %}
