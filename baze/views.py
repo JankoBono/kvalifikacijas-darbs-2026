@@ -2,9 +2,11 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.db.models import Q, Sum
 from django.contrib.auth import authenticate, login, logout
-from .models import Darijums
-from .forms import DarijumsForm
+from django.contrib.auth.decorators import login_required, permission_required
+from .models import Darijums, Plans, UserVeikals
+from .forms import DarijumsForm, PlansForm
 
 
 
@@ -25,31 +27,58 @@ def loginPage(request):
             return redirect('index')
         else:
             messages.error(request, 'Neveiksmīga pieslēgšanās')
-            
+
     context = {}
     return render(request, 'baze/login_register.html', context)
 
 def logoutUser(request):
     logout(request)
-    return redirect('index')
+    return redirect('login')
 
+@login_required
 def index(request):
-    darijumi = Darijums.objects.all()
-    context = {'darijumi': darijumi}
+    
+    user = request.user
+
+    try:
+        user_veikals = UserVeikals.objects.get(user=user).veikals
+    except UserVeikals.DoesNotExist:
+        messages.warning(request, "Jūsu lietotājam nav izveidots veikala profils.")
+        visi_darijums = Darijums.objects.none()
+        visi_summa = {}
+    else:
+        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=user_veikals)
+        visi_summa = visi_darijums.aggregate(
+            total_pieslegumi=Sum('pieslegums'),
+            total_atv_iekarta=Sum('atv_iekarta'),
+            total_nom_iekarta=Sum('nom_iekarta'),
+            total_pil_iekarta=Sum('pil_iekarta'),
+            total_viedpaligs=Sum('viedpaligs'),
+            total_apdr_iekartas=Sum('apdr_iekartas'),
+            total_aksesuars=Sum('aksesuars'),
+            total_viedtelevizija=Sum('viedtelevizija')
+        )
+
+    darijumi = Darijums.objects.filter(lietotajs=request.user)
+    context = {'darijumi': darijumi, 'visi_darijumi':visi_darijums,'visi_summa': visi_summa}
     return render(request, 'baze/home.html', context)
 
+@login_required
 def addDarijums(request):
     form = DarijumsForm()
     if request.method == 'POST':
         print(request.POST)
         form = DarijumsForm(request.POST)
         if form.is_valid():
-            form.save()
+            darijums_instance = form.save(commit=False)
+            darijums_instance.lietotajs = request.user
+            darijums_instance.save()
             return redirect('index')
 
     context = {'form': form}
     return render(request, 'baze/darijums_add.html', context)
 
+@login_required
 def editDarijums(request, pk):
     darijums = Darijums.objects.get(id=pk)
     form = DarijumsForm(instance=darijums)
@@ -63,9 +92,56 @@ def editDarijums(request, pk):
     context = {'form' : form}
     return render(request, 'baze/darijums_add.html', context)
 
+@login_required
 def deleteDarijums(request, pk):
     darijums = Darijums.objects.get(id=pk)
     if request.method == "POST":
         darijums.delete()
         return redirect('index')
     return render(request, 'baze/delete.html', {'obj':darijums})
+
+@login_required
+def planuLapa(request):
+    plani = Plans.objects.all()
+    context = {'plani': plani}
+    return render(request, 'baze/plani.html', context)
+
+@permission_required('baze.add_plans', raise_exception=True)
+@login_required
+def addPlans(request):
+    form = PlansForm()
+    if request.method == 'POST':
+        print(request.POST)
+        form = PlansForm(request.POST)
+        if form.is_valid():
+            plans_instance = form.save(commit=False)
+            plans_instance.lietotajs = request.user
+            plans_instance.save()
+            return redirect('plani')
+
+    context = {'form': form}
+    return render(request, 'baze/plans_add.html', context)
+
+@permission_required('baze.change_plans', raise_exception=True)
+@login_required
+def editPlans(request, pk):
+    plans = Plans.objects.get(id=pk)
+    form = PlansForm(instance=plans)
+
+    if request.method == 'POST':
+        form = PlansForm(request.POST, instance=plans)
+        if form.is_valid():
+            form.save()
+            return redirect('plani')
+
+    context = {'form' : form}
+    return render(request, 'baze/plans_add.html', context)
+
+@permission_required('baze.delete_plans', raise_exception=True)
+@login_required
+def deletePlans(request, pk):
+    plans = Plans.objects.get(id=pk)
+    if request.method == "POST":
+        plans.delete()
+        return redirect('plani')
+    return render(request, 'baze/delete.html', {'obj':plans})

@@ -13,6 +13,29 @@
             <span>{{darijums}} + {{darijums.lietotajs.first_name}} // aksesuāri: {{darijums.aksesuars}}</span>
         </div>
         {% endfor %}
+        <hr>
+        {% for visi_darijums in visi_darijumi %}
+        <div>
+            <span>{{visi_darijums}} + {{visi_darijums.lietotajs.first_name}} // aksesuāri: {{visi_darijums.aksesuars}}</span>
+        </div>
+        {% endfor %}
+        <hr>
+
+        <h2>Veikala kopējie dati</h2>
+        {% if visi_summa %}
+            <ul>
+                <li>Pieslēgumi: {{ visi_summa.total_pieslegumi|default:0 }}</li>
+                <li>ATV iekārtas: {{ visi_summa.total_atv_iekarta|default:0 }}</li>
+                <li>Nom. iekārtas: {{ visi_summa.total_nom_iekarta|default:0 }}</li>
+                <li>Pil. iekārtas: {{ visi_summa.total_pil_iekarta|default:0 }}</li>
+                <li>Viedpalīgi: {{ visi_summa.total_viedpaligs|default:0 }}</li>
+                <li>Apdr. iekārtas: {{ visi_summa.total_apdr_iekartas|default:0 }}</li>
+                <li>Aksesuāri: {{ visi_summa.total_aksesuars|default:0 }}</li>
+                <li>Viedtelevīzijas: {{ visi_summa.total_viedtelevizija|default:0 }}</li>
+            </ul>
+        {% else %}
+            <p>Nav pieejamu datu šim veikalam.</p>
+        {% endif %}
     </div>
 </div>
 

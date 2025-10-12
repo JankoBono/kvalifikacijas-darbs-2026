@@ -123,3 +123,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# This is the URL path to redirect users to if they try to access 
+# a view decorated with @login_required without being logged in.
+LOGIN_URL = '/login/' 
+
+# This is the URL path to redirect users to AFTER they successfully log in.
+# Since your home page is at the root '/', set this to '/'.
+LOGIN_REDIRECT_URL = '/' 

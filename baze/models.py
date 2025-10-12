@@ -1,6 +1,8 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
+from datetime import date
 
 # Create your models here.
 
@@ -16,6 +18,24 @@ class UserVeikals(models.Model):
 
     def __str__(self):
         return self.user.username
+    
+def current_year():
+    return date.today().year
+
+MONTH_CHOICES = [
+    ('1', 'Janvāris'),
+    ('2', 'Februāris'),
+    ('3', 'Marts'),
+    ('4', 'Aprīlis'),
+    ('5', 'Maijs'),
+    ('6', 'Jūnijs'),
+    ('7', 'Jūlijs'),
+    ('8', 'Augusts'),
+    ('9', 'Septembris'),
+    ('10', 'Oktobris'),
+    ('11', 'Novembris'),
+    ('12', 'Decembris'),
+]
 
 class Plans(models.Model):
     lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -23,11 +43,11 @@ class Plans(models.Model):
     iekartas = models.IntegerField()
     viedpaligi = models.IntegerField()
     aksesuari = models.IntegerField()
-    atv_proprocija = models.DecimalField(max_digits=5, decimal_places=2)
-    apdr_proporcija = models.DecimalField(max_digits=5, decimal_places=2)
+    atv_proprocija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
+    apdr_proporcija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
     viedtelevizija = models.IntegerField()
-    menesis = models.CharField(max_length=20)
-    gads = models.IntegerField()
+    menesis = models.CharField(max_length=2, choices=MONTH_CHOICES, default=str(date.today().month))
+    gads = models.IntegerField(default=current_year)
 
     def __str__(self):
         return self.menesis

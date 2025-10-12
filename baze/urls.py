@@ -9,4 +9,8 @@ urlpatterns = [
     path('add-darijums/', views.addDarijums, name="add-darijums"),
     path('edit-darijums/<str:pk>/', views.editDarijums, name="edit-darijums"),
     path('delete-darijums/<str:pk>/', views.deleteDarijums, name="delete-darijums"),
+    path("plani/", views.planuLapa, name="plani"),
+    path('add-plans/', views.addPlans, name="add-plans"),
+    path('edit-plans/<str:pk>/', views.editPlans, name="edit-plans"),
+    path('delete-plans/<str:pk>/', views.deletePlans, name="delete-plans"),
 ]

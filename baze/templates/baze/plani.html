@@ -1,0 +1,24 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+<div>
+    {% if perms.baze.add_plans %}
+    <a href="{% url 'add-plans' %}">Pievienot plānu</a>
+    {% endif %}
+    <div>
+        {% for plans in plani %}
+        <div>
+            {% if perms.baze.change_plans %}
+            <a href="{% url 'edit-plans' plans.id %}">Rediģēt</a>
+            {% endif %}
+            {% if perms.baze.delete_plans %}
+            <a href="{% url 'delete-plans' plans.id %}">Izdzēst</a>
+            {% endif %}
+            <span>{{plans}} + {{plans.lietotajs.first_name}} // aksesuāri: {{plans.aksesuari}}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
