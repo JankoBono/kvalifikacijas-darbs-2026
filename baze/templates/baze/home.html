@@ -8,7 +8,9 @@
     <div>
         {% for darijums in darijumi %}
         <div>
-            <span>{{darijums}}</span>
+            <a href="{% url 'edit-darijums' darijums.id %}">Rediģēt</a>
+            <a href="{% url 'delete-darijums' darijums.id %}">Izdzēst</a>
+            <span>{{darijums}} + {{darijums.lietotajs.first_name}} // aksesuāri: {{darijums.aksesuars}}</span>
         </div>
         {% endfor %}
     </div>
