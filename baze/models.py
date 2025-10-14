@@ -49,8 +49,16 @@ class Plans(models.Model):
     menesis = models.CharField(max_length=2, choices=MONTH_CHOICES, default=str(date.today().month))
     gads = models.IntegerField(default=current_year)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['lietotajs', 'menesis', 'gads'],
+                name='viens_menesis_gads'
+            )
+        ]
+
     def __str__(self):
-        return self.menesis
+        return f"{self.lietotajs} — {self.menesis}/{self.gads}"
 
 class Darijums(models.Model):
     lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)

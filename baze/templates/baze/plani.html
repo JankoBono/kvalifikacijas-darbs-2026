@@ -15,7 +15,7 @@
             {% if perms.baze.delete_plans %}
             <a href="{% url 'delete-plans' plans.id %}">Izdzēst</a>
             {% endif %}
-            <span>{{plans}} + {{plans.lietotajs.first_name}} // aksesuāri: {{plans.aksesuari}}</span>
+            <span>{{plans}}</span>
         </div>
         {% endfor %}
     </div>
