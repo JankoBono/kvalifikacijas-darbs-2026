@@ -9,31 +9,94 @@
         <div>
             <a href="{% url 'edit-darijums' darijums.id %}">Rediģēt</a>
             <a href="{% url 'delete-darijums' darijums.id %}">Izdzēst</a>
-            <span>{{darijums}} + {{darijums.lietotajs.first_name}} // aksesuāri: {{darijums.aksesuars}}</span>
+            <span>{{darijums}} + {{darijums.lietotajs.first_name}}</span>
         </div>
         {% endfor %}
         <hr>
-        {% for visi_darijums in visi_darijumi %}
-        <div>
-            <span>{{visi_darijums}} + {{visi_darijums.lietotajs.first_name}} // aksesuāri: {{visi_darijums.aksesuars}}</span>
-        </div>
-        {% endfor %}
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Pārdevējs</th>
+                    <th>Pieslēgumi</th>
+                    <th>Atv. iekārtas</th>
+                    <th>Nom. iekārtas</th>
+                    <th>Pil. iekārtas</th>
+                    <th>Viedpalīgi</th>
+                    <th>Apdr. iekārtas</th>
+                    <th>Aksesuāri</th>
+                    <th>Viedtelevīzijas</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kolegis in ind_darijumi %}
+                <tr>
+                    <td>{{ kolegis.lietotajs__first_name }} {{ kolegis.lietotajs__last_name }}</td>
+                    <td>{{ kolegis.total_pieslegums|default:0 }}</td>
+                    <td>{{ kolegis.total_atv_iekarta|default:0 }}</td>
+                    <td>{{ kolegis.total_nom_iekarta|default:0 }}</td>
+                    <td>{{ kolegis.total_pil_iekarta|default:0 }}</td>
+                    <td>{{ kolegis.total_viedpaligs|default:0 }}</td>
+                    <td>{{ kolegis.total_apdr_iekartas|default:0 }}</td>
+                    <td>{{ kolegis.total_aksesuars|default:0 }}</td>
+                    <td>{{ kolegis.total_viedtelevizija|default:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
         <hr>
 
-        <h2>Veikala kopējie dati</h2>
-        {% if visi_summa %}
-            <ul>
-                <li>Pieslēgumi: {{ visi_summa.total_pieslegumi|default:0 }}</li>
-                <li>Iekārtas: {{ visi_summa.iekartas_kopa|default:0 }}</li>
-                <li>Viedpalīgi: {{ visi_summa.total_viedpaligs|default:0 }}</li>
-                <li>Atvērtā līguma proporcija: {{ visi_summa.atv_proporcija }}%</li>
-                <li>Apdrošināšanas proporcija: {{ visi_summa.apdr_proporcija }}%</li>
-                <li>Aksesuāri: {{ visi_summa.total_aksesuars|default:0 }}</li>
-                <li>Viedtelevīzijas: {{ visi_summa.total_viedtelevizija|default:0 }}</li>
-            </ul>
-        {% else %}
-            <p>Nav pieejamu datu šim veikalam.</p>
-        {% endif %}
+
+        <h2>Veikala dienas dati</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th> </th>
+                    <th>Izpildītais</th>
+                    <th>Dienas mērķis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Pieslēgumi</td>
+                    <td>{{ visi_summa.total_pieslegumi|default:0 }}</td>
+                    <td>{{ dienas_merkis.pieslegumi }}</td>
+                </tr>
+                <tr>
+                    <td>Iekārtas</td>
+                    <td>{{ visi_summa.iekartas_kopa|default:0 }}</td>
+                    <td>{{ dienas_merkis.iekartas }}</td>
+                </tr>
+                <tr>
+                    <td>Viedpalīgi</td>
+                    <td>{{ visi_summa.total_viedpaligs|default:0 }}</td>
+                    <td>{{ dienas_merkis.viedpaligi }}</td>
+                </tr>
+                <tr>
+                    <td>Atvērtā līguma proporcija (%)</td>
+                    <td>{{ visi_summa.atv_proporcija|default:0 }}</td>
+                    <td>{{ dienas_merkis.atvertais }}</td>
+                </tr>
+                <tr>
+                    <td>Apdrošināšanas proporcija (%)</td>
+                    <td>{{ visi_summa.apdr_proporcija|default:0 }}</td>
+                    <td>{{ dienas_merkis.apdrosinasana }}</td>
+                </tr>
+                <tr>
+                    <td>Aksesuāri</td>
+                    <td>{{ visi_summa.total_aksesuars|default:0 }}</td>
+                    <td>{{ dienas_merkis.aksesuari }}</td>
+                </tr>
+                <tr>
+                    <td>Viedtelevīzijas</td>
+                    <td>{{ visi_summa.total_viedtelevizija|default:0 }}</td>
+                    <td>{{ dienas_merkis.viedtelevizija }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
     </div>
 </div>
 

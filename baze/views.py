@@ -1,15 +1,21 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Avg, F
 from django.db import IntegrityError
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from .models import Darijums, Plans, UserVeikals
 from .forms import DarijumsForm, PlansForm
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+import math
 
 
+def palikusas_dienas(current_date):
+    next_month = current_date + relativedelta(months=+1, day=1)
+    delta = next_month - current_date
+    return delta.days
 
 def loginPage(request):
     if request.method == "POST":
@@ -40,6 +46,9 @@ def logoutUser(request):
 def index(request):
     
     user = request.user
+    today = date.today()
+    start_of_month = today + relativedelta(day=1)
+    vakardienas_datums = today - timedelta(days=1)
 
     try:
         user_veikals = UserVeikals.objects.get(user=user).veikals
@@ -47,8 +56,21 @@ def index(request):
         messages.warning(request, "Jūsu lietotājam nav izveidots veikala profils.")
         visi_darijums = Darijums.objects.none()
         visi_summa = {}
+        dienas_merkis = {}
     else:
-        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=user_veikals)
+        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=user_veikals, datums__date=today)
+
+        ind_darijumi = visi_darijums.values('lietotajs__username','lietotajs__first_name', 'lietotajs__last_name').annotate(
+            total_pieslegums=Sum('pieslegums'),
+            total_atv_iekarta=Sum('atv_iekarta'),
+            total_nom_iekarta=Sum('nom_iekarta'),
+            total_pil_iekarta=Sum('pil_iekarta'),
+            total_viedpaligs=Sum('viedpaligs'),
+            total_apdr_iekartas=Sum('apdr_iekartas'),
+            total_aksesuars=Sum('aksesuars'),
+            total_viedtelevizija=Sum('viedtelevizija')
+        )
+
         visi_summa = visi_darijums.aggregate(
             total_pieslegumi=Sum('pieslegums'),
             total_atv_iekarta=Sum('atv_iekarta'),
@@ -68,11 +90,91 @@ def index(request):
 
         visi_summa['iekartas_kopa'] = atv + nom + pil
 
-        visi_summa['atv_proporcija'] = round(atv / (atv + nom), 3) * 100
-        visi_summa['apdr_proporcija'] = round(apdr / (atv + nom + pil + vied), 3) * 100
+        if atv + nom != 0:
+            visi_summa['atv_proporcija'] = round(atv / (atv + nom), 2) * 100
+        else:
+            visi_summa['atv_proporcija'] = 0
 
-    darijumi = Darijums.objects.filter(lietotajs=request.user)
-    context = {'darijumi': darijumi, 'visi_darijumi':visi_darijums,'visi_summa': visi_summa}
+        if atv + nom + pil + vied !=0:
+            visi_summa['apdr_proporcija'] = round(apdr / (atv + nom + pil + vied), 2) * 100
+        else:
+            visi_summa['apdr_proporcija'] = 0
+
+
+        veikala_darijumi = Darijums.objects.filter(
+            lietotajs__userveikals__veikals=user_veikals,
+            datums__date__gte=start_of_month,
+            datums__date__lte=vakardienas_datums,
+        )
+
+        if veikala_darijumi.exists():
+            veikala_men_summa = veikala_darijumi.aggregate(
+                men_pieslegumi=Sum('pieslegums'),
+                total_atv_iekarta=Sum('atv_iekarta'),
+                total_nom_iekarta=Sum('nom_iekarta'),
+                total_pil_iekarta=Sum('pil_iekarta'),
+                total_viedpaligs=Sum('viedpaligs'),
+                total_apdr_iekartas=Sum('apdr_iekartas'),
+                total_aksesuars=Sum('aksesuars'),
+                total_viedtelevizija=Sum('viedtelevizija')
+            )
+
+            m_atv = veikala_men_summa.get('total_atv_iekarta') or 0
+            m_nom = veikala_men_summa.get('total_nom_iekarta') or 0
+            m_pil = veikala_men_summa.get('total_pil_iekarta') or 0
+            m_vied = veikala_men_summa.get('total_viedpaligs') or 0
+            m_apdr = veikala_men_summa.get('total_apdr_iekartas') or 0
+
+            veikala_men_summa['iekartas_kopa'] = m_atv + m_nom + m_pil
+
+            if m_atv + m_nom != 0:
+                veikala_men_summa['atv_proporcija'] = round(m_atv / (m_atv + m_nom), 3) * 100
+            else:
+                veikala_men_summa['atv_proporcija'] = 0
+
+            if m_atv + m_nom + m_pil + m_vied !=0:
+                veikala_men_summa['apdr_proporcija'] = round(m_apdr / (atv + m_nom + m_pil + m_vied), 3) * 100
+            else:
+                veikala_men_summa['apdr_proporcija'] = 0
+
+        else:
+            veikala_men_summa = {}
+
+        visi_plani = Plans.objects.filter(
+            lietotajs__userveikals__veikals=user_veikals,
+            menesis=str(today.month),
+            gads=today.year
+        )
+
+        if visi_plani.exists():
+            plan_sum = visi_plani.aggregate(
+                total_pieslegumi=Sum('pieslegumi'),
+                total_iekartas=Sum('iekartas'),
+                total_viedpaligi=Sum('viedpaligi'),
+                total_aksesuari=Sum('aksesuari'),
+                total_viedtelevizija=Sum('viedtelevizija'),
+                total_apdr_prop = Avg('apdr_proporcija'),
+                total_atv_prop = Avg('atv_proprocija'),
+            )
+
+            dienas_merkis = {
+                'pieslegumi': math.ceil(((plan_sum['total_pieslegumi'] or 0) - (veikala_men_summa.get('men_pieslegumi') or 0)) / palikusas_dienas(today)),
+                'iekartas': math.ceil(((plan_sum['total_iekartas'] or 0) - (veikala_men_summa.get('iekartas_kopa') or 0)) / palikusas_dienas(today)),
+                'viedpaligi': math.ceil(((plan_sum['total_viedpaligi'] or 0) - (veikala_men_summa.get('total_viedpaligs') or 0)) / palikusas_dienas(today)),
+                'aksesuari': math.ceil(((plan_sum['total_aksesuari'] or 0) - (veikala_men_summa.get('total_aksesuars') or 0)) / palikusas_dienas(today)),
+                'atvertais' : round(plan_sum['total_atv_prop'] or 0, 1) * 100,
+                'apdrosinasana' : round(plan_sum['total_apdr_prop'] or 0, 1) * 100,
+                'viedtelevizija': math.ceil(((plan_sum['total_viedtelevizija'] or 0) - (veikala_men_summa.get('total_viedtelevizija') or 0)) / palikusas_dienas(today)),
+            }
+        else:
+            dienas_merkis = {}
+
+
+        
+
+
+    darijumi = Darijums.objects.filter(lietotajs=request.user, datums__date=today)
+    context = {'darijumi': darijumi, 'visi_darijumi':visi_darijums,'visi_summa': visi_summa, 'dienas_merkis': dienas_merkis, 'ind_darijumi': ind_darijumi}
     return render(request, 'baze/home.html', context)
 
 @login_required

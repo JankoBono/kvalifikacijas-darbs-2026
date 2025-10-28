@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
+from django.utils import timezone
 from datetime import date
 
 # Create your models here.
@@ -70,7 +71,7 @@ class Darijums(models.Model):
     apdr_iekartas = models.IntegerField(null=True, blank=True)
     aksesuars = models.IntegerField(null=True, blank=True)
     viedtelevizija = models.IntegerField(null=True, blank=True)
-    datums = models.DateTimeField(auto_now_add=True)
+    datums = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ['-datums']
