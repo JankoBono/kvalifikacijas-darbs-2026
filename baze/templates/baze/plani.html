@@ -2,10 +2,39 @@
 
 {% block content %}
 
+{% if user_progress_data %}
+<div style="margin-bottom: 40px;">
+    <h2>Mans mēneša progress</h2>
+    <p>Dienas līdz mēneša beigām: {{ remaining_days }}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Kategorija</th>
+                <th>Izpilde</th>
+                <th>Plāns</th>
+                <th>Progress (%)</th>
+                <th>Dienas individuālais mērķis</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in user_progress_data %}
+            <tr>
+                <td>{{ row.kategorija }}</td>
+                <td>{{ row.izpilde }}</td>
+                <td>{{ row.plans }}</td>
+                <td>{{ row.progress }}%</td>
+                <td>{{ row.daily_target }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<hr>
+{% endif %}
+
 <div>
     {% if perms.baze.add_plans %}
     <a href="{% url 'add-plans' %}">Pievienot plānu</a>
-    {% endif %}
     <div>
         {% for plans in plani %}
         <div>
@@ -19,6 +48,18 @@
         </div>
         {% endfor %}
     </div>
+    {% endif %}
 </div>
+
+<hr>
+
+{% for chart in charts %}
+    <div class="chart-container" style="margin-bottom: 40px;">
+        {{ chart|safe }}
+    </div>
+{% empty %}
+    <p>Nav pieejamu plānu vai darījumu datu.</p>
+{% endfor %}
+
 
 {% endblock %}

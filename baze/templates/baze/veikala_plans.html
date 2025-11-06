@@ -1,0 +1,123 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+<div>
+    {% if veikals %}
+    <h1>{{ veikals.nosaukums }} — Veikala plāna progress</h1>
+    
+    <!-- Date Range Filter -->
+    <div>
+        <h3>Izvēlēties periodu</h3>
+        <form method="get" action="{% url 'veikala-plans' %}">
+            <div>
+                <div>
+                    <label for="start_month">Sākuma mēnesis:</label>
+                    <select name="start_month" id="start_month">
+                        {% for month_num, month_name in months %}
+                        <option value="{{ month_num }}" {% if month_num == start_month %}selected{% endif %}>{{ month_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="start_year">Sākuma gads:</label>
+                    <select name="start_year" id="start_year">
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if year == start_year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="end_month">Beigu mēnesis:</label>
+                    <select name="end_month" id="end_month">
+                        {% for month_num, month_name in months %}
+                        <option value="{{ month_num }}" {% if month_num == end_month %}selected{% endif %}>{{ month_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="end_year">Beigu gads:</label>
+                    <select name="end_year" id="end_year">
+                        {% for year in years %}
+                        <option value="{{ year }}" {% if year == end_year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <button type="submit">
+                        Rādīt
+                    </button>
+                    <button type="button" onclick="resetToCurrentMonth()">
+                        Atiestatīt
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <div style="margin-bottom: 40px;">
+        <h2>Veikala kopsavilkums - {{ period_text }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Kategorija</th>
+                    <th>Izpilde</th>
+                    <th>Plāns</th>
+                    <th>Progress (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data %}
+                <tr>
+                    <td>{{ row.kategorija }}</td>
+                    <td>{{ row.izpilde }}</td>
+                    <td>{{ row.plans }}</td>
+                    <td>{{ row.progress }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">Nav datu izvēlētajam periodam</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p>Paredzētais progress: {{ expected_progress }}%</p>
+    </div>
+    
+    <hr>
+    
+    {% if chart %}
+    <div style="margin-bottom: 40px;">
+        <h2>Veikala progresa grafiks</h2>
+        {{ chart|safe }}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <p>Nav pieejamu veikala datu.</p>
+    {% endif %}
+</div>
+
+<script>
+function resetToCurrentMonth() {
+    // Get today's date
+    var today = new Date();
+    var currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
+    var currentYear = today.getFullYear();
+    
+    // Reset all dropdowns to current month and year
+    document.getElementById('start_month').value = currentMonth;
+    document.getElementById('start_year').value = currentYear;
+    document.getElementById('end_month').value = currentMonth;
+    document.getElementById('end_year').value = currentYear;
+    
+    // Submit the form
+    document.getElementById('periodForm').submit();
+}
+</script>
+
+{% endblock %}

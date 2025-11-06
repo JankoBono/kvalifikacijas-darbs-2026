@@ -25,5 +25,5 @@ class PlansForm(ModelForm):
                     userveikals__veikals=veikals
                 )
                 
-            except (AttributeError, UserVeikals.DoesNotExist):
+            except UserVeikals.DoesNotExist:
                 self.fields['lietotajs'].queryset = User.objects.none()

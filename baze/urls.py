@@ -13,4 +13,5 @@ urlpatterns = [
     path('add-plans/', views.addPlans, name="add-plans"),
     path('edit-plans/<str:pk>/', views.editPlans, name="edit-plans"),
     path('delete-plans/<str:pk>/', views.deletePlans, name="delete-plans"),
+    path('veikala-plans/', views.veikalaPlans, name='veikala-plans')
 ]
