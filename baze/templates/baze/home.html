@@ -1,17 +1,10 @@
 {% extends 'main.html' %}
 
 {% block content %}
-<h2>Mani darījumi</h2>
 <div>
     <a href="{% url 'add-darijums' %}">Pievienot darījumu</a>
+    <a href="{% url 'mani-darijumi' %}">Mani darījumi</a>
     <div>
-        {% for darijums in darijumi %}
-        <div>
-            <a href="{% url 'edit-darijums' darijums.id %}">Rediģēt</a>
-            <a href="{% url 'delete-darijums' darijums.id %}">Izdzēst</a>
-            <span>{{darijums}} + {{darijums.lietotajs.first_name}}</span>
-        </div>
-        {% endfor %}
         <hr>
         
         <table>

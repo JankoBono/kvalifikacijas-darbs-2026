@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 from datetime import date
 
 # Create your models here.
@@ -18,25 +19,28 @@ class UserVeikals(models.Model):
     veikals = models.ForeignKey(Veikals, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.username} / {self.veikals.nosaukums if self.veikals else 'Nav veikala'}"
     
 def current_year():
     return date.today().year
 
-MONTH_CHOICES = [
-    ('1', 'Janvāris'),
-    ('2', 'Februāris'),
-    ('3', 'Marts'),
-    ('4', 'Aprīlis'),
-    ('5', 'Maijs'),
-    ('6', 'Jūnijs'),
-    ('7', 'Jūlijs'),
-    ('8', 'Augusts'),
-    ('9', 'Septembris'),
-    ('10', 'Oktobris'),
-    ('11', 'Novembris'),
-    ('12', 'Decembris'),
-]
+def menesis_tagad():
+    menesa_nr_tagad = date.today().month
+
+    try:
+        return Menesis.objects.get(menesis_id=menesa_nr_tagad)
+    except ObjectDoesNotExist:
+        return None
+
+class Menesis(models.Model):
+    menesis_id = models.PositiveSmallIntegerField(unique=True)  # 1–12
+    nosaukums = models.CharField(max_length=20, unique=True)
+
+    class Meta:
+        ordering = ['menesis_id']
+
+    def __str__(self):
+        return self.nosaukums
 
 class Plans(models.Model):
     lietotajs = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -47,16 +51,9 @@ class Plans(models.Model):
     atv_proprocija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
     apdr_proporcija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
     viedtelevizija = models.IntegerField()
-    menesis = models.CharField(max_length=2, choices=MONTH_CHOICES, default=str(date.today().month))
+    menesis = models.ForeignKey(Menesis, on_delete=models.SET_NULL, null=True, default=menesis_tagad)
     gads = models.IntegerField(default=current_year)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['lietotajs', 'menesis', 'gads'],
-                name='viens_menesis_gads'
-            )
-        ]
 
     def __str__(self):
         return f"{self.lietotajs} — {self.menesis}/{self.gads}"

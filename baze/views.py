@@ -4,7 +4,9 @@ from django.contrib import messages
 from django.db.models import Sum, Avg
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
-from .models import Darijums, Plans, UserVeikals
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from .models import Darijums, Plans, UserVeikals, Menesis
 from .forms import DarijumsForm, PlansForm
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
@@ -157,9 +159,11 @@ def index(request):
             veikala_men_summa = {}
 
         # Izfiltrē visus veikala plānus priekš mēneša dienas mērķa aprēķina
+        menesis_tagad = Menesis.objects.get(menesis_id=today.month)
+
         visi_plani = Plans.objects.filter(
             lietotajs__userveikals__veikals=user_veikals,
-            menesis=str(today.month),
+            menesis=menesis_tagad,
             gads=today.year
         )
 
@@ -188,13 +192,7 @@ def index(request):
         else:
             dienas_merkis = {}
 
-
-        
-
-
-    darijumi = Darijums.objects.filter(lietotajs=request.user, datums__date=today)
     context = {
-        'darijumi': darijumi, 
         'visi_darijumi':visi_darijums,
         'visi_summa': visi_summa, 
         'dienas_merkis': dienas_merkis, 
@@ -228,19 +226,40 @@ def editDarijums(request, pk):
         form = DarijumsForm(request.POST, instance=darijums)
         if form.is_valid():
             form.save()
-            return redirect('index')
+            return redirect('mani-darijumi')
 
     context = {'form' : form}
     return render(request, 'baze/darijums_add.html', context)
 
 # Darījumu dzēšanas funkcija
 @login_required
+@require_POST
 def deleteDarijums(request, pk):
-    darijums = Darijums.objects.get(id=pk)
-    if request.method == "POST":
+    try:
+        darijums = Darijums.objects.get(id=pk)
+        
         darijums.delete()
-        return redirect('index')
-    return render(request, 'baze/delete.html', {'obj':darijums})
+        messages.success(request, "Darījums veiksmīgi izdzēsts!")
+
+    except Darijums.DoesNotExist:
+        messages.error(request, "Darījums nav atrasts.")
+
+    return redirect('mani-darijumi')
+
+@login_required
+def maniDarijumi(request):
+    user = request.user
+    today = date.today()
+    menesa_sakums = today + relativedelta(day=1)
+
+    darijumi = Darijums.objects.filter(
+            lietotajs=user,
+            datums__date__gte=menesa_sakums,
+            datums__date__lte=today,
+        ).order_by('-datums')
+
+    context = {'darijumi': darijumi}
+    return render(request, 'baze/mani_darijumi.html', context)
 
 # Plānu lapa ar grafikiem un individuālo progresu
 @login_required
@@ -250,11 +269,14 @@ def planuLapa(request):
     try:
         user_veikals = UserVeikals.objects.get(user=user)
         veikals = user_veikals.veikals
-        plani = Plans.objects.filter(lietotajs__userveikals__veikals=veikals, menesis=str(today.month), gads=today.year)
+        plani = Plans.objects.filter(
+            lietotajs__userveikals__veikals=veikals,
+            menesis__menesis_id=today.month,
+            gads=today.year
+            )
 
         kopa_dienas = calendar.monthrange(today.year, today.month)[1]
-        menesa_progress = today.day / kopa_dienas
-        paredzetais_progress = menesa_progress * 100
+        paredzetais_progress = (today.day / kopa_dienas) * 100
         palikusas_dienas = kopa_dienas - today.day
 
         grafiki = []
@@ -273,6 +295,7 @@ def planuLapa(request):
                 aksesuari=Sum('aksesuars') or 0,
                 viedtelevizija=Sum('viedtelevizija') or 0,
             )
+            print(darijumi)
 
             for key, val in darijumi.items():
                 darijumi[key] = val or 0
@@ -300,10 +323,10 @@ def planuLapa(request):
 
             if p.lietotajs == user:
                 ind_progresa_dati = []
-                for i, category in enumerate(kategorijas):
+                for i, kategorija in enumerate(kategorijas):
                     dienas_merkis = math.ceil((planotais[i] - realais[i]) / palikusas_dienas) if palikusas_dienas > 0 and planotais[i] > realais[i] else 0
                     ind_progresa_dati.append({
-                        'kategorija': category,
+                        'kategorija': kategorija,
                         'izpilde': realais[i],
                         'plans': planotais[i],
                         'progress': progress[i],
@@ -365,7 +388,7 @@ def planuLapa(request):
 
     context = {
         'plani': plani,
-        "grafiki": grafiki, 
+        'grafiki': grafiki, 
         'ind_progresa_dati': ind_progresa_dati, 
         'palikusas_dienas': palikusas_dienas
         }
@@ -379,22 +402,11 @@ def addPlans(request):
     if request.method == 'POST':
         print(request.POST)
         form = PlansForm(request.POST, user=request.user)
-
         if form.is_valid():
             plan = form.save(commit=False)
-            
             plan.save()
             messages.success(request, "Plāns veiksmīgi pievienots!")
             return redirect('plani')
-        else:
-            # Check if the error is due to unique constraint
-            if '__all__' in form.errors:
-                for error in form.errors['__all__']:
-                    if 'already exists' in str(error):
-                        messages.error(request, "Šim lietotājam jau ir izveidots plāns šim mēnesim un gadam.")
-                        # Clear the default error message
-                        form.errors['__all__'].clear()
-                        break
 
     context = {'form': form}
     return render(request, 'baze/plans_add.html', context)
@@ -586,17 +598,17 @@ def veikalaPlans(request):
             textposition="auto",
         )
 
-        menesi_latviski = {
-            1: 'Janvāris', 2: 'Februāris', 3: 'Marts', 4: 'Aprīlis',
-            5: 'Maijs', 6: 'Jūnijs', 7: 'Jūlijs', 8: 'Augusts',
-            9: 'Septembris', 10: 'Oktobris', 11: 'Novembris', 12: 'Decembris'
-        }
-        
-        # Izveido perioda tekstu virsrakstam
-        if sakuma_menesis == beigu_menesis and sakuma_gads == beigu_gads:
-            period_text = f"{menesi_latviski[sakuma_menesis]} {sakuma_gads}"
-        else:
-            period_text = f"{menesi_latviski[sakuma_menesis]} {sakuma_gads} - {menesi_latviski[beigu_menesis]} {beigu_gads}"
+        try:
+            sakuma_menesis_obj = Menesis.objects.get(menesis_id=sakuma_menesis)
+            beigu_menesis_obj = Menesis.objects.get(menesis_id=beigu_menesis)
+            
+            # Create period text for title
+            if sakuma_menesis == beigu_menesis and sakuma_gads == beigu_gads:
+                period_text = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads}"
+            else:
+                period_text = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads} - {beigu_menesis_obj.nosaukums} {beigu_gads}"
+        except Menesis.DoesNotExist:
+            period_text = f"{sakuma_menesis}/{sakuma_gads} - {beigu_menesis}/{beigu_gads}"
         
         layout = go.Layout(
             title=f"{veikals.nosaukums} — progress ({period_text})",
@@ -630,11 +642,7 @@ def veikalaPlans(request):
         # Ģenerē gadu un mēnešu sarakstu izvēlnēm
         patreizejais_datums_year = today.year
         years = list(range(patreizejais_datums_year - 2, patreizejais_datums_year + 1))  # 2 years before and after
-        months = [
-            (1, 'Janvāris'), (2, 'Februāris'), (3, 'Marts'), (4, 'Aprīlis'),
-            (5, 'Maijs'), (6, 'Jūnijs'), (7, 'Jūlijs'), (8, 'Augusts'),
-            (9, 'Septembris'), (10, 'Oktobris'), (11, 'Novembris'), (12, 'Decembris')
-        ]
+        menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
         
         context = {
             'veikals': veikals,
@@ -646,7 +654,7 @@ def veikalaPlans(request):
             'sakuma_gads': sakuma_gads,
             'beigu_menesis': beigu_menesis,
             'beigu_gads': beigu_gads,
-            'months': months,
+            'months': menesu_obj,
             'years': years,
         }
         
@@ -655,11 +663,7 @@ def veikalaPlans(request):
         
         patreizejais_datums_year = today.year
         years = list(range(patreizejais_datums_year - 2, patreizejais_datums_year + 2))
-        months = [
-            (1, 'Janvāris'), (2, 'Februāris'), (3, 'Marts'), (4, 'Aprīlis'),
-            (5, 'Maijs'), (6, 'Jūnijs'), (7, 'Jūlijs'), (8, 'Augusts'),
-            (9, 'Septembris'), (10, 'Oktobris'), (11, 'Novembris'), (12, 'Decembris')
-        ]
+        menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
         
         context = {
             'veikals': None,
@@ -670,7 +674,7 @@ def veikalaPlans(request):
             'sakuma_gads': today.year,
             'beigu_menesis': today.month,
             'beigu_gads': today.year,
-            'months': months,
+            'months': menesu_obj,
             'years': years,
         }
     

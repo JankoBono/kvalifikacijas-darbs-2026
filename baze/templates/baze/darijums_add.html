@@ -6,7 +6,7 @@
     <form method="POST" action="">
         {% csrf_token %}
         {{form.as_p}}
-
+        <a href="{{request.META.HTTP_REFERER}}">Atpakaļ</a>
         <input type="submit" value="Apstirpināt"/>
     </form>
 </div>
