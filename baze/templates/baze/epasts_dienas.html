@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Veikala sistēma</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .danger {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        .summary-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dienas kopsavilkums</h1>
+        <p style="margin: 0;">{{ veikals_nosaukums }}</p>
+    </div>
+    
+    <div class="content">
+        <div class="summary-box">
+            <h2 style="margin-top: 0;">📅 {{ datums }}</h2>
+        </div>
+        
+        <h2>Veikala dienas dati</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th> </th>
+                    <th>Izpildītais</th>
+                    <th>Dienas mērķis</th>
+                    <th>Statuss</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Pieslēgumi</strong></td>
+                    <td>{{ visi_summa.kopa_pieslegumi|default:0 }}</td>
+                    <td>{{ dienas_merkis.pieslegumi }}</td>
+                    <td>
+                        {% if visi_summa.kopa_pieslegumi >= dienas_merkis.pieslegumi %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Iekārtas</strong></td>
+                    <td>{{ visi_summa.iekartas_kopa|default:0 }}</td>
+                    <td>{{ dienas_merkis.iekartas }}</td>
+                    <td>
+                        {% if visi_summa.iekartas_kopa >= dienas_merkis.iekartas %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Viedpalīgi</strong></td>
+                    <td>{{ visi_summa.kopa_viedpaligs|default:0 }}</td>
+                    <td>{{ dienas_merkis.viedpaligi }}</td>
+                    <td>
+                        {% if visi_summa.kopa_viedpaligs >= dienas_merkis.viedpaligi %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Atvērtā līguma proporcija (%)</strong></td>
+                    <td>{{ visi_summa.atv_proporcija|default:0 }}%</td>
+                    <td>{{ dienas_merkis.atvertais }}%</td>
+                    <td>
+                        {% if visi_summa.atv_proporcija >= dienas_merkis.atvertais %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Apdrošināšanas proporcija (%)</strong></td>
+                    <td>{{ visi_summa.apdr_proporcija|default:0 }}%</td>
+                    <td>{{ dienas_merkis.apdrosinasana }}%</td>
+                    <td>
+                        {% if visi_summa.apdr_proporcija >= dienas_merkis.apdrosinasana %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Aksesuāri</strong></td>
+                    <td>{{ visi_summa.kopa_aksesuars|default:0 }}</td>
+                    <td>{{ dienas_merkis.aksesuari }}</td>
+                    <td>
+                        {% if visi_summa.kopa_aksesuars >= dienas_merkis.aksesuari %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Viedtelevīzijas</strong></td>
+                    <td>{{ visi_summa.kopa_viedtelevizija|default:0 }}</td>
+                    <td>{{ dienas_merkis.viedtelevizija }}</td>
+                    <td>
+                        {% if visi_summa.kopa_viedtelevizija >= dienas_merkis.viedtelevizija %}
+                            <span class="success">Sasniegts</span>
+                        {% else %}
+                            <span class="danger">Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <p>Šis ir automātisks ziņojums no pārdošanas uzskaites sistēmas.</p>
+            <p>Nosūtīts: {{ datums }} 22:00</p>
+        </div>
+    </div>
+</body>
+</html>

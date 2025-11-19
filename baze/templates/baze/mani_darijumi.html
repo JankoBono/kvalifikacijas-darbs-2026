@@ -43,7 +43,13 @@
         
     </div>
     <a href="{% url 'edit-darijums' darijums.id %}">Rediģēt</a>
-    <a href="javascript:void(0);" onclick="openDeleteModal('{{ darijums.id }}', '{{ darijums }}')">Dzēst</a>
+    <a href="javascript:void(0);" 
+        data-id="{{ darijums.id }}"
+        data-info="darījumu - {{ darijums.lietotajs.first_name }} {{ darijums.datums|date:'d.m.Y' }}"
+        data-url="{% url 'delete-darijums' darijums.id %}"
+        onclick="openDeleteModal(this)">
+        Dzēst
+    </a>
 
 <div id="deleteModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
     <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; border-radius: 5px; width: 80%; max-width: 500px;">
@@ -65,24 +71,5 @@
 </div>
 {% endfor %}
 
-<script>
-function openDeleteModal(darijumsId, darijumsInfo) {
-    document.getElementById('deleteModal').style.display = 'block';
-    document.getElementById('deleteMessage').textContent = 'Vai tiešām vēlaties izdzēst darījumu: ' + darijumsInfo + '?';
-    document.getElementById('deleteForm').action = "{% url 'delete-darijums' 0 %}".replace('0', darijumsId);
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModal').style.display = 'none';
-}
-
-// Close modal when clicking outside of it
-window.onclick = function(event) {
-    var modal = document.getElementById('deleteModal');
-    if (event.target == modal) {
-        closeDeleteModal();
-    }
-}
-</script>
 
 {% endblock %}

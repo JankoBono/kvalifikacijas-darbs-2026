@@ -15,8 +15,8 @@ local_settings.py
 secrets.json
 
 # 5. User-Uploaded Files and Collected Static Files
-/media/
-/static/
+/staticfiles/
+/static_root/
 
 # 6. IDE and OS Files
 .DS_Store

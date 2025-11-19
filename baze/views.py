@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .models import Darijums, Plans, UserVeikals, Menesis
+from .utils import aprekini_veikala_dienas_datus, palikusas_dienas
 from .forms import DarijumsForm, PlansForm
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
@@ -15,11 +16,6 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 import calendar
 
-# Funkcija aprēķina atlikušo dienu skaitu mēnesī
-def palikusas_dienas(datums_tagad):
-    nak_menesis = datums_tagad + relativedelta(months=+1, day=1)
-    delta = nak_menesis - datums_tagad
-    return delta.days
 
 # Funkcija pieslēgšanās lapai
 def loginPage(request):
@@ -53,27 +49,16 @@ def logoutUser(request):
 # Galvenā lapa pēc pieslēgšanās
 @login_required
 def index(request):
-    
-    user = request.user
-    today = date.today()
-    menesa_sakums = today + relativedelta(day=1)
-    vakardienas_datums = today - timedelta(days=1)
-
-    # Mēģina iegūt lietotāja veikalu
     try:
-        user_veikals = UserVeikals.objects.get(user=user).veikals
-    except UserVeikals.DoesNotExist:
-        messages.warning(request, "Jūsu lietotājam nav izveidots veikala profils.")
-        visi_darijums = Darijums.objects.none()
-        visi_summa = {}
-        dienas_merkis = {}
-        ind_darijumi = Darijums.objects.none()
+        lietotaja_veikals = UserVeikals.objects.get(user=request.user).veikals
 
-    # Ja veikals ir pieejams, aprēķina datus, ko parāda mājas lapā
-    else:
-        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=user_veikals, datums__date=today)
+        
+        # Iegūst veikala dienas datus
+        
+        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=lietotaja_veikals, datums__date=date.today())
+        veikala_dati = aprekini_veikala_dienas_datus(lietotaja_veikals)
 
-        # Aprēķina individuālos darījumus priekš individuālās tabulas
+        # Aprēķina individuālos darījumus priekš katra kolēģa individuālās tabulas
         ind_darijumi = visi_darijums.values('lietotajs__username','lietotajs__first_name', 'lietotajs__last_name').annotate(
             kopa_pieslegums=Sum('pieslegums'),
             kopa_atv_iekarta=Sum('atv_iekarta'),
@@ -84,121 +69,23 @@ def index(request):
             kopa_aksesuars=Sum('aksesuars'),
             kopa_viedtelevizija=Sum('viedtelevizija')
         )
-
-        # Aprēķina kopējos darījumus priekš kopējās tabulas
-        visi_summa = visi_darijums.aggregate(
-            kopa_pieslegumi=Sum('pieslegums'),
-            kopa_atv_iekarta=Sum('atv_iekarta'),
-            kopa_nom_iekarta=Sum('nom_iekarta'),
-            kopa_pil_iekarta=Sum('pil_iekarta'),
-            kopa_viedpaligs=Sum('viedpaligs'),
-            kopa_apdr_iekartas=Sum('apdr_iekartas'),
-            kopa_aksesuars=Sum('aksesuars'),
-            kopa_viedtelevizija=Sum('viedtelevizija')
-        )
-
-        atv = visi_summa.get('kopa_atv_iekarta') or 0
-        nom = visi_summa.get('kopa_nom_iekarta') or 0
-        pil = visi_summa.get('kopa_pil_iekarta') or 0
-        vied = visi_summa.get('kopa_viedpaligs') or 0
-        apdr = visi_summa.get('kopa_apdr_iekartas') or 0
-
-        # Aprēķina kopējo iekārtu skaitu
-        visi_summa['iekartas_kopa'] = atv + nom + pil
-
-        # Aprēķina atvērto iekārtu proporciju
-        if atv + nom != 0:
-            visi_summa['atv_proporcija'] = round(atv / (atv + nom), 2) * 100
-        else:
-            visi_summa['atv_proporcija'] = 0
-
-        # Aprēķina apdrošināto iekārtu proporciju
-        if atv + nom + pil + vied !=0:
-            visi_summa['apdr_proporcija'] = round(apdr / (atv + nom + pil + vied), 2) * 100
-        else:
-            visi_summa['apdr_proporcija'] = 0
-
-        # Izfiltrē veikala darījumu mēneša datus priekš dienas mērķa aprēķina
-        veikala_darijumi = Darijums.objects.filter(
-            lietotajs__userveikals__veikals=user_veikals,
-            datums__date__gte=menesa_sakums,
-            datums__date__lte=vakardienas_datums,
-        )
-
-        if veikala_darijumi.exists():
-            veikala_men_summa = veikala_darijumi.aggregate(
-                men_pieslegumi=Sum('pieslegums'),
-                men_atv_iekarta=Sum('atv_iekarta'),
-                men_nom_iekarta=Sum('nom_iekarta'),
-                men_pil_iekarta=Sum('pil_iekarta'),
-                men_viedpaligs=Sum('viedpaligs'),
-                men_apdr_iekartas=Sum('apdr_iekartas'),
-                men_aksesuars=Sum('aksesuars'),
-                men_viedtelevizija=Sum('viedtelevizija')
-            )
-
-            m_atv = veikala_men_summa.get('men_atv_iekarta') or 0
-            m_nom = veikala_men_summa.get('men_nom_iekarta') or 0
-            m_pil = veikala_men_summa.get('men_pil_iekarta') or 0
-            m_vied = veikala_men_summa.get('men_viedpaligs') or 0
-            m_apdr = veikala_men_summa.get('men_apdr_iekartas') or 0
-
-            veikala_men_summa['iekartas_kopa'] = m_atv + m_nom + m_pil
-
-            if m_atv + m_nom != 0:
-                veikala_men_summa['atv_proporcija'] = round(m_atv / (m_atv + m_nom), 3) * 100
-            else:
-                veikala_men_summa['atv_proporcija'] = 0
-
-            if m_atv + m_nom + m_pil + m_vied !=0:
-                veikala_men_summa['apdr_proporcija'] = round(m_apdr / (atv + m_nom + m_pil + m_vied), 3) * 100
-            else:
-                veikala_men_summa['apdr_proporcija'] = 0
-
-        else:
-            veikala_men_summa = {}
-
-        # Izfiltrē visus veikala plānus priekš mēneša dienas mērķa aprēķina
-        menesis_tagad = Menesis.objects.get(menesis_id=today.month)
-
-        visi_plani = Plans.objects.filter(
-            lietotajs__userveikals__veikals=user_veikals,
-            menesis=menesis_tagad,
-            gads=today.year
-        )
-
-        if visi_plani.exists():
-            # Apvieno visus plānus un aprēķina to summas
-            plan_sum = visi_plani.aggregate(
-                kopa_pieslegumi=Sum('pieslegumi'),
-                kopa_iekartas=Sum('iekartas'),
-                kopa_viedpaligi=Sum('viedpaligi'),
-                kopa_aksesuari=Sum('aksesuari'),
-                kopa_viedtelevizija=Sum('viedtelevizija'),
-                kopa_apdr_prop = Avg('apdr_proporcija'),
-                kopa_atv_prop = Avg('atv_proprocija'),
-            )
-
-            # Aprēķina dienas mērķi katrai kategorijai
-            dienas_merkis = {
-                'pieslegumi': math.ceil(((plan_sum['kopa_pieslegumi'] or 0) - (veikala_men_summa.get('men_pieslegumi') or 0)) / palikusas_dienas(today)),
-                'iekartas': math.ceil(((plan_sum['kopa_iekartas'] or 0) - (veikala_men_summa.get('iekartas_kopa') or 0)) / palikusas_dienas(today)),
-                'viedpaligi': math.ceil(((plan_sum['kopa_viedpaligi'] or 0) - (veikala_men_summa.get('men_viedpaligs') or 0)) / palikusas_dienas(today)),
-                'aksesuari': math.ceil(((plan_sum['kopa_aksesuari'] or 0) - (veikala_men_summa.get('men_aksesuars') or 0)) / palikusas_dienas(today)),
-                'atvertais' : round(plan_sum['kopa_atv_prop'] or 0, 1) * 100,
-                'apdrosinasana' : round(plan_sum['kopa_apdr_prop'] or 0, 1) * 100,
-                'viedtelevizija': math.ceil(((plan_sum['kopa_viedtelevizija'] or 0) - (veikala_men_summa.get('men_viedtelevizija') or 0)) / palikusas_dienas(today)),
-            }
-        else:
-            dienas_merkis = {}
-
-    context = {
-        'visi_darijumi':visi_darijums,
-        'visi_summa': visi_summa, 
-        'dienas_merkis': dienas_merkis, 
-        'ind_darijumi': ind_darijumi
+        
+        context = {
+            'visi_summa': veikala_dati['visi_summa'],
+            'dienas_merkis': veikala_dati['dienas_merkis'],
+            'ind_darijumi': ind_darijumi
         }
+        
+    except UserVeikals.DoesNotExist:
+        messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
+        context = {
+            'visi_summa': {},
+            'dienas_merkis': {},
+            'ind_darijumi': [],
+        }
+    
     return render(request, 'baze/home.html', context)
+
 
 # Darījumu pievienošanas funkcija
 @login_required
@@ -431,11 +318,15 @@ def editPlans(request, pk):
 @permission_required('baze.delete_plans', raise_exception=True)
 @login_required
 def deletePlans(request, pk):
-    plans = Plans.objects.get(id=pk)
-    if request.method == "POST":
+    try:
+        plans = Plans.objects.get(id=pk)
+        
         plans.delete()
-        return redirect('plani')
-    return render(request, 'baze/delete.html', {'obj':plans})
+        messages.success(request, "Plāns veiksmīgi izdzēsts!")
+    except Plans.DoesNotExist:
+        messages.error(request, "Plāns nav atrasts.")
+
+    return redirect('plani')
 
 # Veikala plānu lapa ar kopējo progresu un grafikiem
 @login_required

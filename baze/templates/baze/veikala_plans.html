@@ -102,22 +102,5 @@
     {% endif %}
 </div>
 
-<script>
-function atgutDatumu() {
-    // Get today's date
-    var today = new Date();
-    var tagadejaisMenesis = today.getMonth() + 1; // JavaScript months are 0-indexed
-    var tagadejaisGads = today.getFullYear();
-    
-    // Reset all dropdowns to current month and year
-    document.getElementById('sakuma_menesis').value = tagadejaisMenesis;
-    document.getElementById('sakuma_gads').value = tagadejaisGads;
-    document.getElementById('beigu_menesis').value = tagadejaisMenesis;
-    document.getElementById('beigu_gads').value = tagadejaisGads;
-    
-    // Submit the form
-    document.getElementById('periodForm').submit();
-}
-</script>
 
 {% endblock %}
