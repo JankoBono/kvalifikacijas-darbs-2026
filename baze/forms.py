@@ -45,7 +45,7 @@ class PlansForm(ModelForm):
             'iekartas': 'Iekārtas',
             'viedpaligi': 'Viedpalīgi',
             'aksesuari': 'Aksesuāri',
-            'atv_proprocija': 'Atvērtā līguma proporcija',
+            'atv_proporcija': 'Atvērtā līguma proporcija',
             'apdr_proporcija': 'Apdrošināšanas proporcija',
             'viedtelevizija': 'Viedtelevīzija',
             'menesis': 'Mēnesis',
@@ -75,7 +75,7 @@ class PlansForm(ModelForm):
 
         pozicijas = [
             'pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija',
-            'atv_proprocija', 'apdr_proporcija'
+            'atv_proporcija', 'apdr_proporcija'
         ]
 
         for field in pozicijas:
@@ -83,7 +83,7 @@ class PlansForm(ModelForm):
             if vertiba is not None and vertiba < 0:
                 self.add_error(field, 'Vērtība nevar būt negatīva.')
 
-        for prop_field in ['atv_proprocija', 'apdr_proporcija']:
+        for prop_field in ['atv_proporcija', 'apdr_proporcija']:
             vertiba = derigi_dati.get(prop_field)
             if vertiba is not None and not (0 <= vertiba <= 1):
                 self.add_error(prop_field, 'Proporcijai jābūt starp 0 un 1.')

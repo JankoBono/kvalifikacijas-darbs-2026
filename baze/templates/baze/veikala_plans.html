@@ -86,6 +86,30 @@
             </tbody>
         </table>
         <p>Paredzētais progress: {{ paredzetais_progress }}%</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Kategorija</th>
+                    <th>Attiecība</th>
+                    <th>Procentuāli</th>
+                    <th>Plāns</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Atvērtā līguma proporcija</td>
+                    <td>{{ veikala_proporcijas.atv_iekartas|default:"0" }} / {{ veikala_kopa.iekartas_izpilde|default:"0" }}</td>
+                    <td>{{ veikala_proporcijas.atv_proporcija|default:"0" }}%</td>
+                    <td>{{ veikala_proporcijas.atv_plans|default:"0" }}%</td>
+                </tr>
+                <tr>
+                    <td>Apdrošināšanas proporcija</td>
+                    <td>{{ veikala_proporcijas.apdr_iekartas|default:"0" }} / {{ veikala_kopa.iekartas_izpilde|default:"0"|add:veikala_kopa.viedpaligi_izpilde|default:"0" }}</td>
+                    <td>{{ veikala_proporcijas.apdr_proporcija|default:"0" }}%</td>
+                    <td>{{ veikala_proporcijas.apdr_plans|default:"0" }}%</td>
+            </tbody>
+        </table>
     </div>
     
     <hr>

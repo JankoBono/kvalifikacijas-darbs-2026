@@ -48,7 +48,7 @@ class Plans(models.Model):
     iekartas = models.IntegerField()
     viedpaligi = models.IntegerField()
     aksesuari = models.IntegerField()
-    atv_proprocija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
+    atv_proporcija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
     apdr_proporcija = models.DecimalField(max_digits=5, decimal_places=2, default=0.5)
     viedtelevizija = models.IntegerField()
     menesis = models.ForeignKey(Menesis, on_delete=models.SET_NULL, null=True, default=menesis_tagad)

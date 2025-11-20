@@ -28,6 +28,30 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Kategorija</th>
+                <th>Attiecība</th>
+                <th>Procentuāli</th>
+                <th>Plāns</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Atvērtā līguma proporcija</td>
+                <td>{{ proporcijas.atv_iekartas|default:"0" }} / {{ proporcijas.iekartas|default:"0" }}</td>
+                <td>{{ proporcijas.atv_proporcija|default:"0" }}%</td>
+                <td>{{ proporcijas.atv_plans|default:"0" }}%</td>
+            </tr>
+            <tr>
+                <td>Apdrošināšanas proporcija</td>
+                <td>{{ proporcijas.apdr_iekartas|default:"0" }} / {{ proporcijas.iekartas|default:"0"|add:proporcijas.viedpaligi|default:"0" }}</td>
+                <td>{{ proporcijas.apdr_proporcija|default:"0" }}%</td>
+                <td>{{ proporcijas.apdr_plans|default:"0" }}%</td>
+        </tbody>
+    </table>
 </div>
 <hr>
 {% endif %}
@@ -44,7 +68,7 @@
             {% if perms.baze.delete_plans %}
             <a href="javascript:void(0);" 
                 data-id="{{ plans.id }}"
-                data-info="plānu - {{ plans.lietotajs.first_name }} {{ plans.menesis }}/{{ plans.gads }}"
+                data-info="plānu: {{ plans.lietotajs.first_name }} - {{ plans.menesis }}/{{ plans.gads }}"
                 data-url="{% url 'delete-plans' plans.id %}"
                 onclick="openDeleteModal(this)">
                 Dzēst
