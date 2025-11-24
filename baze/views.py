@@ -249,20 +249,24 @@ def planuLapa(request):
         )
 
         proporcijas = Darijums.objects.filter(
-            lietotajs__userveikals__veikals=veikals,
+            lietotajs=user,
             datums__month=today.month,
             datums__year=today.year,
         ).aggregate(
             atv_iekartas=Sum('atv_iekarta'),
             apdr_iekartas=Sum('apdr_iekartas'),
-            iekartas=Sum('atv_iekarta') + Sum('nom_iekarta') + Sum('pil_iekarta'),
+            atv_iekarta=Sum('atv_iekarta'),
+            nom_iekarta=Sum('nom_iekarta'),
+            pil_iekarta=Sum('pil_iekarta'),
             viedpaligi=Sum('viedpaligs'),
         )
 
-        proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / (proporcijas['iekartas'] or 1) * 100, 2)
-        proporcijas['apdr_proporcija'] = round((proporcijas['apdr_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) + (proporcijas['viedpaligi'] or 1)) * 100, 2)
-        proporcijas['atv_plans'] = round(prop_plans.aggregate(Avg('atv_proporcija'))['atv_proporcija__avg'] * 100 or 0, 0)
-        proporcijas['apdr_plans'] = round(prop_plans.aggregate(Avg('apdr_proporcija'))['apdr_proporcija__avg'] * 100 or 0, 0)
+        proporcijas['iekartas'] = (proporcijas['atv_iekarta'] or 0) + (proporcijas['nom_iekarta'] or 0) + (proporcijas['pil_iekarta'] or 0)
+
+        proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) - (proporcijas['pil_iekarta'] or 0)) * 100, 1)
+        proporcijas['apdr_proporcija'] = round((proporcijas['apdr_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) + (proporcijas['viedpaligi'] or 1)) * 100, 1)
+        proporcijas['atv_plans'] = round((prop_plans.aggregate(Avg('atv_proporcija'))['atv_proporcija__avg'] or 0) * 100, 0)
+        proporcijas['apdr_plans'] = round((prop_plans.aggregate(Avg('apdr_proporcija'))['apdr_proporcija__avg'] or 0) * 100, 0)
 
 
         # Izveido grafikus katram pārdevējam
@@ -272,12 +276,16 @@ def planuLapa(request):
                 datums__month=today.month,
                 datums__year=today.year,
             ).aggregate(
-                pieslegumi=Sum('pieslegums') or 0,
-                iekartas=Sum('atv_iekarta') + Sum('nom_iekarta') + Sum('pil_iekarta'),
-                viedpaligi=Sum('viedpaligs') or 0,
-                aksesuari=Sum('aksesuars') or 0,
-                viedtelevizija=Sum('viedtelevizija') or 0,
+                pieslegumi=Sum('pieslegums'),
+                atv_iekarta=Sum('atv_iekarta'),
+                nom_iekarta=Sum('nom_iekarta'),
+                pil_iekarta=Sum('pil_iekarta'),
+                viedpaligi=Sum('viedpaligs'),
+                aksesuari=Sum('aksesuars'),
+                viedtelevizija=Sum('viedtelevizija'),
             )
+
+            darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
 
             for key, val in darijumi.items():
                 darijumi[key] = val or 0
@@ -529,11 +537,12 @@ def veikalaPlans(request):
 
         veikala_proporcijas = {
             'atv_iekartas': 0,
+            'nom_iekartas': 0,
             'apdr_iekartas': 0,
             'atv_plans': 0,
             'apdr_plans': 0,
         }
-        
+        planu_skaits = 0
         # Iegūst plānus un darījumus katram mēnesim un apkopo tos
         for month, year in menesi_intervala:
             plani = Plans.objects.filter(
@@ -541,7 +550,8 @@ def veikalaPlans(request):
                 menesis=str(month), 
                 gads=year
             )
-            
+
+            planu_skaits += len(plani)            
 
             for p in plani:
                 darijumi = Darijums.objects.filter(
@@ -549,14 +559,17 @@ def veikalaPlans(request):
                     datums__month=month,
                     datums__year=year,
                 ).aggregate(
-                    pieslegumi=Sum('pieslegums') or 0,
-                    iekartas=Sum('atv_iekarta') + Sum('nom_iekarta') + Sum('pil_iekarta'),
-                    atv_iekartas=Sum('atv_iekarta') or 0,
-                    apdr_iekartas=Sum('apdr_iekartas') or 0,
-                    viedpaligi=Sum('viedpaligs') or 0,
-                    aksesuari=Sum('aksesuars') or 0,
-                    viedtelevizija=Sum('viedtelevizija') or 0,
+                    pieslegumi=Sum('pieslegums'),
+                    atv_iekarta=Sum('atv_iekarta'),
+                    nom_iekarta=Sum('nom_iekarta'),
+                    pil_iekarta=Sum('pil_iekarta'),
+                    apdr_iekartas=Sum('apdr_iekartas'),
+                    viedpaligi=Sum('viedpaligs'),
+                    aksesuari=Sum('aksesuars'),
+                    viedtelevizija=Sum('viedtelevizija'),
                 )
+
+                darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
                 
                 veikala_kopa['pieslegumi_plans'] += (p.pieslegumi or 0)
                 veikala_kopa['iekartas_plans'] += (p.iekartas or 0)
@@ -570,15 +583,16 @@ def veikalaPlans(request):
                 veikala_kopa['aksesuari_izpilde'] += (darijumi['aksesuari'] or 0)
                 veikala_kopa['viedtelevizija_izpilde'] += (darijumi['viedtelevizija'] or 0)
 
-                veikala_proporcijas['atv_iekartas'] += (darijumi['atv_iekartas'] or 0)
+                veikala_proporcijas['atv_iekartas'] += (darijumi['atv_iekarta'] or 0)
+                veikala_proporcijas['nom_iekartas'] += (darijumi['nom_iekarta'] or 0)
                 veikala_proporcijas['apdr_iekartas'] += (darijumi['apdr_iekartas'] or 0)
                 veikala_proporcijas['atv_plans'] += (p.atv_proporcija or 0)
                 veikala_proporcijas['apdr_plans'] += (p.apdr_proporcija or 0)
 
-        veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / len(menesi_intervala)) * 100 if plani else 0, 0)
-        veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / len(menesi_intervala)) * 100 if plani else 0, 0)
-        veikala_proporcijas['atv_proporcija'] = round((veikala_proporcijas['atv_iekartas'] or 0) / (veikala_kopa['iekartas_izpilde'] or 1) * 100, 2)
-        veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_kopa['iekartas_izpilde'] or 1) + (veikala_kopa['viedpaligi_izpilde'] or 1)) * 100, 2)
+        veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / planu_skaits) * 100 if plani else 0, 0)
+        veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / planu_skaits) * 100 if plani else 0, 0)
+        veikala_proporcijas['atv_proporcija'] = round((veikala_proporcijas['atv_iekartas'] or 0) / ((veikala_proporcijas['atv_iekartas'] or 1) + (veikala_proporcijas['nom_iekartas'] or 1)) * 100, 1)
+        veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_kopa['iekartas_izpilde'] or 1) + (veikala_kopa['viedpaligi_izpilde'] or 1)) * 100, 1)
 
         kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
         kategoriju_atslegas = ['pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija']

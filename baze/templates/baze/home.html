@@ -1,97 +1,123 @@
 {% extends 'main.html' %}
 
 {% block content %}
-<div>
-    <a href="{% url 'add-darijums' %}">Pievienot darījumu</a>
-    <a href="{% url 'mani-darijumi' %}">Mani darījumi</a>
-    <div>
-        <hr>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Pārdevējs</th>
-                    <th>Pieslēgumi</th>
-                    <th>Atv. iekārtas</th>
-                    <th>Nom. iekārtas</th>
-                    <th>Pil. iekārtas</th>
-                    <th>Viedpalīgi</th>
-                    <th>Apdr. iekārtas</th>
-                    <th>Aksesuāri</th>
-                    <th>Viedtelevīzijas</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for kolegis in ind_darijumi %}
-                <tr>
-                    <td>{{ kolegis.lietotajs__first_name }} {{ kolegis.lietotajs__last_name }}</td>
-                    <td>{{ kolegis.kopa_pieslegums|default:0 }}</td>
-                    <td>{{ kolegis.kopa_atv_iekarta|default:0 }}</td>
-                    <td>{{ kolegis.kopa_nom_iekarta|default:0 }}</td>
-                    <td>{{ kolegis.kopa_pil_iekarta|default:0 }}</td>
-                    <td>{{ kolegis.kopa_viedpaligs|default:0 }}</td>
-                    <td>{{ kolegis.kopa_apdr_iekartas|default:0 }}</td>
-                    <td>{{ kolegis.kopa_aksesuars|default:0 }}</td>
-                    <td>{{ kolegis.kopa_viedtelevizija|default:0 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
 
-        <hr>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Dienas lapa</h2>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'add-darijums' %}" class="btn btn-primary">+ Pievienot darījumu</a>
+                    <a href="{% url 'mani-darijumi' %}" class="btn btn-outline-secondary">Mani darījumi</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Individuālie darījumi</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Pārdevējs</th>
+                                    <th class="text-center">Pieslēgumi</th>
+                                    <th class="text-center">Atv. iekārtas</th>
+                                    <th class="text-center">Nom. iekārtas</th>
+                                    <th class="text-center">Pil. iekārtas</th>
+                                    <th class="text-center">Viedpalīgi</th>
+                                    <th class="text-center">Apdr. iekārtas</th>
+                                    <th class="text-center">Aksesuāri</th>
+                                    <th class="text-center">Viedtelevīzijas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for kolegis in ind_darijumi %}
+                                <tr>
+                                    <td><strong>{{ kolegis.lietotajs__first_name }} {{ kolegis.lietotajs__last_name }}</strong></td>
+                                    <td class="text-center">{{ kolegis.kopa_pieslegums|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_atv_iekarta|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_nom_iekarta|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_pil_iekarta|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_viedpaligs|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_apdr_iekartas|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_aksesuars|default:0 }}</td>
+                                    <td class="text-center">{{ kolegis.kopa_viedtelevizija|default:0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <h2>Veikala dienas dati</h2>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th> </th>
-                    <th>Izpildītais</th>
-                    <th>Dienas mērķis</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Pieslēgumi</td>
-                    <td>{{ visi_summa.kopa_pieslegumi|default:0 }}</td>
-                    <td>{{ dienas_merkis.pieslegumi }}</td>
-                </tr>
-                <tr>
-                    <td>Iekārtas</td>
-                    <td>{{ visi_summa.kopa_iekartas|default:0 }}</td>
-                    <td>{{ dienas_merkis.iekartas }}</td>
-                </tr>
-                <tr>
-                    <td>Viedpalīgi</td>
-                    <td>{{ visi_summa.kopa_viedpaligs|default:0 }}</td>
-                    <td>{{ dienas_merkis.viedpaligi }}</td>
-                </tr>
-                <tr>
-                    <td>Atvērtā līguma proporcija (%)</td>
-                    <td>{{ visi_summa.atv_proporcija|default:0 }}</td>
-                    <td>{{ dienas_merkis.atvertais }}</td>
-                </tr>
-                <tr>
-                    <td>Apdrošināšanas proporcija (%)</td>
-                    <td>{{ visi_summa.apdr_proporcija|default:0 }}</td>
-                    <td>{{ dienas_merkis.apdrosinasana }}</td>
-                </tr>
-                <tr>
-                    <td>Aksesuāri</td>
-                    <td>{{ visi_summa.kopa_aksesuars|default:0 }}</td>
-                    <td>{{ dienas_merkis.aksesuari }}</td>
-                </tr>
-                <tr>
-                    <td>Viedtelevīzijas</td>
-                    <td>{{ visi_summa.kopa_viedtelevizija|default:0 }}</td>
-                    <td>{{ dienas_merkis.viedtelevizija }}</td>
-                </tr>
-            </tbody>
-        </table>
-        
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Veikala dienas dati</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kategorija</th>
+                                    <th class="text-center">Izpildītais</th>
+                                    <th class="text-center">Dienas mērķis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Pieslēgumi</strong></td>
+                                    <td class="text-center">{{ visi_summa.kopa_pieslegumi|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.pieslegumi }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Iekārtas</strong></td>
+                                    <td class="text-center">{{ visi_summa.kopa_iekartas|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.iekartas }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Viedpalīgi</strong></td>
+                                    <td class="text-center">{{ visi_summa.kopa_viedpaligs|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.viedpaligi }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Atvērtā līguma proporcija (%)</strong></td>
+                                    <td class="text-center">{{ visi_summa.atv_proporcija|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.atvertais }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Apdrošināšanas proporcija (%)</strong></td>
+                                    <td class="text-center">{{ visi_summa.apdr_proporcija|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.apdrosinasana }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Aksesuāri</strong></td>
+                                    <td class="text-center">{{ visi_summa.kopa_aksesuars|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.aksesuari }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Viedtelevīzijas</strong></td>
+                                    <td class="text-center">{{ visi_summa.kopa_viedtelevizija|default:0 }}</td>
+                                    <td class="text-center">{{ dienas_merkis.viedtelevizija }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
 
 {% endblock %}

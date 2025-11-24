@@ -1,22 +1,15 @@
 function openDeleteModal(element) {
-    const itemId = element.getAttribute('data-id');
     const itemInfo = element.getAttribute('data-info');
     const deleteUrl = element.getAttribute('data-url');
-    
-    document.getElementById('deleteModal').style.display = 'block';
+
+
     document.getElementById('deleteMessage').textContent = 'Vai tiešām vēlaties izdzēst: ' + itemInfo + '?';
     document.getElementById('deleteForm').action = deleteUrl;
-}
 
-function closeDeleteModal() {
-    document.getElementById('deleteModal').style.display = 'none';
-}
+    const modalElement = document.getElementById('deleteModal');
 
-window.onclick = function(event) {
-    var modal = document.getElementById('deleteModal');
-    if (event.target == modal) {
-        closeDeleteModal();
-    }
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
 }
 
 // Attiestata datuma filtrus uz šodienas datumu un iesniedz formu

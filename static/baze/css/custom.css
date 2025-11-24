@@ -1,0 +1,52 @@
+:root {
+    --bs-primary: #f97e3b;
+    --bs-secondary: #273d4a;
+    --bs-success: #008000;
+    --bs-info: #36b9cc;
+    --bs-warning: #f6c23e;
+    --bs-danger: #FF0000;
+    --bs-light: #F5F5F5;
+    --bs-dark: #37474F;
+}
+
+.btn-primary { background-color: #f97e3b; border-color: #f97e3b; }
+.btn-primary:hover { background-color: #fba16c; border-color: #fba16c; }
+.bg-primary { background-color: #f97e3b !important; }
+.text-primary { color: #f97e3b !important; }
+.badge-primary { background-color: #f97e3b; }
+
+.btn-secondary { background-color: #273d4a; border-color: #273d4a; }
+.btn-secondary:hover { background-color: #365364; border-color: #365364; }
+.btn-outline-secondary { color: #273d4a; border-color: #273d4a; }
+.btn-outline-secondary:hover { background-color: #273d4a; color: #ffffff; }
+.bg-secondary { background-color: #273d4a !important; }
+.text-secondary { color: #273d4a !important; }
+.badge-secondary { background-color: #273d4a; }
+
+.btn-dark { background-color: #37474F; border-color: #37474F; }
+.btn-dark:hover { background-color: #4b5b62; border-color: #4b5b62; }
+.bg-dark { background-color: #37474F !important; }
+.text-dark { color: #37474F !important; }
+.badge-dark { background-color: #37474F; }
+
+.btn-light { background-color: #F5F5F5; border-color: #F5F5F5; }
+.btn-light:hover { background-color: #e0e0e0; border-color: #e0e0e0; }
+.bg-light { background-color: #F5F5F5 !important; }
+.text-light { color: #F5F5F5 !important; }
+.badge-light { background-color: #F5F5F5; }
+
+.btn-danger { background-color: #FF0000; border-color: #FF0000; }
+.btn-danger:hover { background-color: #ff3333; border-color: #ff3333; }
+.bg-danger { background-color: #FF0000 !important; }
+.text-danger { color: #FF0000 !important; }
+.badge-danger { background-color: #FF0000; }
+
+.btn-success { background-color: #008000; border-color: #008000; }
+.btn-success:hover { background-color: #009900; border-color: #009900; }
+.bg-success { background-color: #008000 !important; }
+.text-success { color: #008000 !important; }
+.badge-success { background-color: #008000; }
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9f6;
+}

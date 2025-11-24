@@ -20,19 +20,44 @@ class DarijumsForm(ModelForm):
                 'viedtelevizija': 'Viedtelevīzija',
             }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+                field.widget.attrs['class'] = 'form-control'
+
     def clean(self):
+        """
+        Pārbauda, vai neviena no laukiem nav negatīva un
+        vai vismaz vienam laukam ir vērtība lielāka par 0.
+
+        Returns:
+            dict: Derīgie dati pēc validācijas.
+            vai
+            kļūda tiek pievienota, ja validācija neizdodas.
+        """
         derigi_dati = super().clean()
-        
+
         pozicijas = [
             'pieslegums', 'atv_iekarta', 'nom_iekarta', 'pil_iekarta',
             'viedpaligs', 'aksesuars', 'viedtelevizija'
         ]
-        
+
         for nosaukums in pozicijas:
             vertiba = derigi_dati.get(nosaukums)
             if vertiba is not None and vertiba < 0:
                 self.add_error(nosaukums, 'Vērtība nevar būt negatīva.')
-        
+
+        # Check that at least one field has a value > 0
+        ir_vertiba = False
+        for nosaukums in pozicijas:
+            vertiba = derigi_dati.get(nosaukums)
+            if vertiba is not None and vertiba > 0:
+                ir_vertiba = True
+                break
+
+        if not ir_vertiba:
+            self.add_error(nosaukums, 'Vismaz vienam laukam jābūt aizpildītam ar vērtību lielāku par 0.')
+
         return derigi_dati
         
 class PlansForm(ModelForm):
@@ -53,21 +78,34 @@ class PlansForm(ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None) 
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
         if user:
             try:
                 veikals = UserVeikals.objects.get(user=user).veikals
-                                
+
                 self.fields['lietotajs'].queryset = User.objects.filter(
                     userveikals__veikals=veikals
                 )
-                
+
             except UserVeikals.DoesNotExist:
                 self.fields['lietotajs'].queryset = User.objects.none()
 
+        # Add Bootstrap classes to all fields
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
     def clean(self):
+        """
+        Pārbauda, vai neviena no laukiem nav negatīva,
+        un vai nav izveidots plāns konkrētajam lietotājam, mēnesim un gadam.
+
+        Atgriež:
+            dict: Derīgie dati pēc validācijas.
+            vai
+            kļūda tiek pievienota, ja validācija neizdodas.
+        """
         derigi_dati = super().clean()
         lietotajs = derigi_dati.get('lietotajs')
         menesis = derigi_dati.get('menesis')

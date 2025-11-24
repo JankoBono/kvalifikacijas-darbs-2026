@@ -6,23 +6,38 @@
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
     <title>Veikala sistēma</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel="stylesheet" type="text/css" href="{% static 'css/main.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'images/vps_logo.png' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'baze/css/custom.css' %}">
 </head>
 <body>
     {% include 'navbar.html' %}
 
     {% if messages %}
-    <ul class="messages">
-        {% for message in messages %}
-        <li>{{message}}</li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-6 col-lg-4">
+                {% for message in messages %}
+                {% if message.tags == 'success' %}
+                <div class="alert alert-success alert-dismissible">
+                    {{ message }}
+                </div>
+                {% else %}
+                <div class="alert alert-danger alert-dismissible">
+                    {{ message }}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     {% block content %}
 
     {% endblock %}
 
-<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/main.js' %}?v=2"></script>
 </body>
 </html>

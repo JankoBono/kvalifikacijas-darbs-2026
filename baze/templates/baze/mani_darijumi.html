@@ -2,74 +2,132 @@
 
 {% block content %}
 
-{% for darijums in darijumi %}
-<div>
-    <div>
-        <span>{{ darijums.datums|date:"d.m.Y H:i" }}</span>
-    </div>
-    
-    <div>
-        {% if darijums.pieslegums %}
-            <span>Pieslēgums: {{ darijums.pieslegums }}</span>
-        {% endif %}
-        
-        {% if darijums.atv_iekarta %}
-            <span>Atvērtā iekārta: {{ darijums.atv_iekarta }}</span>
-        {% endif %}
-        
-        {% if darijums.nom_iekarta %}
-            <span>Nomaksas iekārta: {{ darijums.nom_iekarta }}</span>
-        {% endif %}
-        
-        {% if darijums.pil_iekarta %}
-            <span>Pilnas cenas iekārta: {{ darijums.pil_iekarta }}</span>
-        {% endif %}
-        
-        {% if darijums.viedpaligs %}
-            <span>Viedpalīgs: {{ darijums.viedpaligs }}</span>
-        {% endif %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Mani darījumi</h2>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'add-darijums' %}" class="btn btn-primary">+ Pievienot darījumu</a>
+                    <a href="{% url 'mani-darijumi' %}" class="btn btn-outline-secondary">Dienas lapa</a>
+                </div>
+            </div>
 
-        {% if darijums.apdr_iekartas %}
-            <span>Apdrošināta iekārta: {{ darijums.apdr_iekartas }}</span>
-        {% endif %}
-        
-        {% if darijums.aksesuars %}
-            <span>Aksesuārs: {{ darijums.aksesuars }}</span>
-        {% endif %}
-        
-        {% if darijums.viedtelevizija %}
-            <span>Viedtelevīzija: {{ darijums.viedtelevizija }}</span>
-        {% endif %}
-        
-    </div>
-    <a href="{% url 'edit-darijums' darijums.id %}">Rediģēt</a>
-    <a href="javascript:void(0);" 
-        data-id="{{ darijums.id }}"
-        data-info="darījumu - {{ darijums.lietotajs.first_name }} {{ darijums.datums|date:'d.m.Y' }}"
-        data-url="{% url 'delete-darijums' darijums.id %}"
-        onclick="openDeleteModal(this)">
-        Dzēst
-    </a>
+            {% if darijumi %}
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
+                {% for darijums in darijumi %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-light">
+                            <small class="text-muted">
+                                Nr. {{ darijums.id }} / {{ darijums.datums|date:"d.m.Y H:i" }}
+                            </small>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                {% if darijums.pieslegums %}
+                                <li class="mb-2">
+                                    <span>Pieslēgums:</span>
+                                    <strong>{{ darijums.pieslegums }}</strong>
+                                </li>
+                                {% endif %}
 
-<div id="deleteModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-    <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; border-radius: 5px; width: 80%; max-width: 500px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0;">Dzēst darījumu</h2>
-            <span onclick="closeDeleteModal()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-        </div>
-        <p id="deleteMessage" style="margin-bottom: 20px;"></p>
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button onclick="closeDeleteModal()" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">Atcelt</button>
-            <form id="deleteForm" method="POST" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer;">Dzēst</button>
-            </form>
+                                {% if darijums.atv_iekarta %}
+                                <li class="mb-2">
+                                    <span>Atvērtā iekārta:</span>
+                                    <strong>{{ darijums.atv_iekarta }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.nom_iekarta %}
+                                <li class="mb-2">
+                                    <span>Nomaksas iekārta:</span>
+                                    <strong>{{ darijums.nom_iekarta }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.pil_iekarta %}
+                                <li class="mb-2">
+                                    <span>Pilnas cenas iekārta:</span>
+                                    <strong>{{ darijums.pil_iekarta }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.viedpaligs %}
+                                <li class="mb-2">
+                                    <span>Viedpalīgs:</span>
+                                    <strong>{{ darijums.viedpaligs }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.apdr_iekartas %}
+                                <li class="mb-2">
+                                    <span>Apdrošināta iekārta:</span>
+                                    <strong>{{ darijums.apdr_iekartas }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.aksesuars %}
+                                <li class="mb-2">
+                                    <span>Aksesuārs:</span>
+                                    <strong>{{ darijums.aksesuars }}</strong>
+                                </li>
+                                {% endif %}
+
+                                {% if darijums.viedtelevizija %}
+                                <li class="mb-2">
+                                    <span>Viedtelevīzija:</span>
+                                    <strong>{{ darijums.viedtelevizija }}</strong>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                            <a href="{% url 'edit-darijums' darijums.id %}" class="btn btn-sm btn-outline-secondary">
+                                Rediģēt
+                            </a>
+                            <a href="javascript:void(0);"
+                                class="btn btn-sm btn-outline-danger"
+                                data-id="{{ darijums.id }}"
+                                data-info="darījumu - Nr. {{ darijums.id }} / {{ darijums.datums|date:'d.m.Y H:i' }}"
+                                data-url="{% url 'delete-darijums' darijums.id %}"
+                                onclick="openDeleteModal(this)">
+                                Dzēst
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info text-center">
+                <p class="mb-0">Nav neviena darījuma. Pievienojiet jaunu!</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
+<!-- Delete Modal (Bootstrap) -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Dzēst darījumu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Atcelt</button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Dzēst</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
-{% endfor %}
-
 
 {% endblock %}

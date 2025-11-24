@@ -2,15 +2,52 @@
 
 {% block content %}
 
-<div>
-    <form method="POST" action="">
-        {% csrf_token %}
-        {{form.as_p}}
-        <a href="{{request.META.HTTP_REFERER}}">Atpakaļ</a>
-        <input type="submit" value="Apstirpināt"/>
-    </form>
+<div class="container">
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Pievienot plānu</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="">
+                        {% csrf_token %}
+
+                        {% for field in form %}
+                        <div class="row mb-3">
+                            <label for="{{ field.id_for_label }}" class="col-sm-4 col-form-label">
+                                {{ field.label }}
+                            </label>
+                            <div class="col-sm-8">
+                                {{ field }}
+                                {% if field.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ field.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'plani' %}" class="btn btn-secondary">
+                                Atpakaļ
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Apstiprināt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
-
 
 {% endblock %}
