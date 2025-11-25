@@ -76,37 +76,37 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+                                <tr class="{% if visi_summa.kopa_pieslegumi >= dienas_merkis.pieslegumi %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Pieslēgumi</strong></td>
                                     <td class="text-center">{{ visi_summa.kopa_pieslegumi|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.pieslegumi }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.kopa_iekartas >= dienas_merkis.iekartas %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Iekārtas</strong></td>
                                     <td class="text-center">{{ visi_summa.kopa_iekartas|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.iekartas }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.kopa_viedpaligs >= dienas_merkis.viedpaligi %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Viedpalīgi</strong></td>
                                     <td class="text-center">{{ visi_summa.kopa_viedpaligs|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.viedpaligi }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.atv_proporcija >= dienas_merkis.atvertais %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Atvērtā līguma proporcija (%)</strong></td>
                                     <td class="text-center">{{ visi_summa.atv_proporcija|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.atvertais }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.apdr_proporcija >= dienas_merkis.apdrosinasana %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Apdrošināšanas proporcija (%)</strong></td>
                                     <td class="text-center">{{ visi_summa.apdr_proporcija|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.apdrosinasana }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.kopa_aksesuars >= dienas_merkis.aksesuari %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Aksesuāri</strong></td>
                                     <td class="text-center">{{ visi_summa.kopa_aksesuars|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.aksesuari }}</td>
                                 </tr>
-                                <tr>
+                                <tr class="{% if visi_summa.kopa_viedtelevizija >= dienas_merkis.viedtelevizija %}table-success{% else %}table-danger{% endif %}">
                                     <td><strong>Viedtelevīzijas</strong></td>
                                     <td class="text-center">{{ visi_summa.kopa_viedtelevizija|default:0 }}</td>
                                     <td class="text-center">{{ dienas_merkis.viedtelevizija }}</td>

@@ -4,7 +4,8 @@ from .models import Darijums, Plans, Menesis
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 import math
-
+import plotly.graph_objs as go
+from plotly.offline import plot
 
 def aprekini_veikala_dienas_datus(veikals):
     """"
@@ -182,3 +183,121 @@ def aprekina_menesus_intervala(sakuma_datums, beigu_datums):
             sakuma_datums = date(sakuma_datums.year, sakuma_datums.month + 1, 1)
 
     return menesi
+
+def veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, title):
+    """
+    Veido datus grafika attēlošanai, ieskaitot paredzēto progresu, reālo izpildi un plānoto izpildi.
+
+    Argumenti:
+        paredzetais_progress (float): Paredzētais progress procentos
+        realais (float): Reālais izpildes procents
+        planotais (float): Plānotais izpildes procents
+        progress (float): Faktiskais progress procentos
+        kategorijas (list): Kategoriju nosaukumi
+        title (str): Grafika nosaukums
+
+    Atgriež:
+        str: HTML kods grafika attēlošanai
+    """
+    krasas = ["green" if val >= paredzetais_progress else "red" for val in progress]
+
+    apraksts = [
+        f"{a} / {b} ({v:.1f}%)" if b else f"{a} / 0 (0%)"
+        for a, b, v in zip(realais, planotais, progress)
+    ]
+    print(apraksts)
+    trace = go.Bar(
+        x=kategorijas,
+        y=progress,
+        marker_color=krasas,
+        text=apraksts,
+        textposition="auto",
+    )
+
+    layout = go.Layout(
+                title=title,
+                yaxis=dict(title="Izpilde (%)", range=[0, 120]),
+                title_x=0.5,
+                shapes=[
+                    dict(
+                        type="line",
+                        x0=-0.5,
+                        x1=len(kategorijas),
+                        y0=paredzetais_progress,
+                        y1=paredzetais_progress,
+                        line=dict(color="red", dash="dash"),
+                    )
+                ],
+                annotations=[
+                    dict(
+                        x=len(kategorijas) - 0.3,
+                        y=40,
+                        text=f"Paredzētais progress: {paredzetais_progress:.1f}%",
+                        textangle=90,
+                        showarrow=False,
+                        font=dict(color="black"),
+                    )
+                ],
+            )
+    
+    fig = go.Figure(data=[trace], layout=layout)
+    grafiks = plot(fig, auto_open=False, output_type="div")
+    return grafiks
+
+def aprekina_ind_lig_proporcijas(user):
+    """
+    Aprēķina individuālā līguma proporcijas lietotājam.
+
+    Argumenti:
+        user: Lietotājs, priekš kura aprēķināt proporcijas
+
+    Atgriež:
+        dict: Vārdnīca ar individuālā līguma proporcijām
+    """
+    today = date.today()
+    prop_plans = Plans.objects.filter(
+        lietotajs=user,
+        menesis__menesis_id=today.month,
+        gads=today.year
+    )
+
+    proporcijas = Darijums.objects.filter(
+        lietotajs=user,
+        datums__month=today.month,
+        datums__year=today.year,
+    ).aggregate(
+        atv_iekartas=Sum('atv_iekarta'),
+        apdr_iekartas=Sum('apdr_iekartas'),
+        atv_iekarta=Sum('atv_iekarta'),
+        nom_iekarta=Sum('nom_iekarta'),
+        pil_iekarta=Sum('pil_iekarta'),
+        viedpaligi=Sum('viedpaligs'),
+    )
+
+    proporcijas['iekartas'] = (proporcijas['atv_iekarta'] or 0) + (proporcijas['nom_iekarta'] or 0) + (proporcijas['pil_iekarta'] or 0)
+
+    proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) - (proporcijas['pil_iekarta'] or 0)) * 100, 1)
+    proporcijas['apdr_proporcija'] = round((proporcijas['apdr_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) + (proporcijas['viedpaligi'] or 1)) * 100, 1)
+    proporcijas['atv_plans'] = round((prop_plans.aggregate(Avg('atv_proporcija'))['atv_proporcija__avg'] or 0) * 100, 0)
+    proporcijas['apdr_plans'] = round((prop_plans.aggregate(Avg('apdr_proporcija'))['apdr_proporcija__avg'] or 0) * 100, 0)
+
+    return proporcijas
+
+def progresa_aprekins(realais, planotais):
+    """
+    Aprēķina progresu procentos, pamatojoties uz reālo un plānoto izpildi.
+
+    Argumenti:
+        realais (float): Reālā izpilde
+        planotais (float): Plānotā izpilde
+
+    Atgriež:
+        list: Saraksts ar progresu procentos katrai kategorijai
+    """
+    progress = []
+    for a, b in zip(realais, planotais):
+        if b == 0:
+            progress.append(0)
+        else:
+            progress.append(round(a / b * 100, 1))
+    return progress

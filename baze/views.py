@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
 from .models import Darijums, Plans, UserVeikals, Menesis
-from .utils import aprekini_veikala_dienas_datus, apreikina_paredzeto_progresu, aprekina_menesus_intervala
+from .utils import aprekini_veikala_dienas_datus, apreikina_paredzeto_progresu, aprekina_menesus_intervala, veido_grafiku, aprekina_ind_lig_proporcijas, progresa_aprekins
 from .forms import DarijumsForm, PlansForm
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -242,31 +242,7 @@ def planuLapa(request):
         grafiki = []
         ind_progresa_dati = None
 
-        prop_plans = Plans.objects.filter(
-            lietotajs=user,
-            menesis__menesis_id=today.month,
-            gads=today.year
-        )
-
-        proporcijas = Darijums.objects.filter(
-            lietotajs=user,
-            datums__month=today.month,
-            datums__year=today.year,
-        ).aggregate(
-            atv_iekartas=Sum('atv_iekarta'),
-            apdr_iekartas=Sum('apdr_iekartas'),
-            atv_iekarta=Sum('atv_iekarta'),
-            nom_iekarta=Sum('nom_iekarta'),
-            pil_iekarta=Sum('pil_iekarta'),
-            viedpaligi=Sum('viedpaligs'),
-        )
-
-        proporcijas['iekartas'] = (proporcijas['atv_iekarta'] or 0) + (proporcijas['nom_iekarta'] or 0) + (proporcijas['pil_iekarta'] or 0)
-
-        proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) - (proporcijas['pil_iekarta'] or 0)) * 100, 1)
-        proporcijas['apdr_proporcija'] = round((proporcijas['apdr_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) + (proporcijas['viedpaligi'] or 1)) * 100, 1)
-        proporcijas['atv_plans'] = round((prop_plans.aggregate(Avg('atv_proporcija'))['atv_proporcija__avg'] or 0) * 100, 0)
-        proporcijas['apdr_plans'] = round((prop_plans.aggregate(Avg('apdr_proporcija'))['apdr_proporcija__avg'] or 0) * 100, 0)
+        proporcijas = aprekina_ind_lig_proporcijas(user)
 
 
         # Izveido grafikus katram pārdevējam
@@ -307,9 +283,7 @@ def planuLapa(request):
                 darijumi["viedtelevizija"],
             ]
 
-            progress = [
-                (round(a / b * 100, 1) if b else 0) for a, b in zip(realais, planotais)
-            ]
+            progress = progresa_aprekins(realais, planotais)
 
             if p.lietotajs == user:
                 ind_progresa_dati = []
@@ -323,51 +297,10 @@ def planuLapa(request):
                         'dienas_merkis': round(dienas_merkis, 2)
                     })
 
-            # Color bars based on progress vs. expected
-            colors = ["green" if val >= paredzetais_progress else "red" for val in progress]
+            title = f"{p.lietotajs.first_name} {p.lietotajs.last_name or p.lietotajs.username} — mēneša progress"
 
-            text_labels = [
-                f"{a} / {b} ({v:.1f}%)" if b else f"{a} / 0 (0%)"
-                for a, b, v in zip(realais, planotais, progress)
-            ]
-
-            trace = go.Bar(
-                x=kategorijas,
-                y=progress,
-                marker_color=colors,
-                text=text_labels,
-                textposition="auto",
-            )
-
-            layout = go.Layout(
-                title=f"{p.lietotajs.first_name} {p.lietotajs.last_name or p.lietotajs.username} — mēneša progress",
-                yaxis=dict(title="Izpilde (%)", range=[0, 120]),
-                title_x=0.5,
-                shapes=[
-                    dict(
-                        type="line",
-                        x0=-0.5,
-                        x1=len(kategorijas),
-                        y0=paredzetais_progress,
-                        y1=paredzetais_progress,
-                        line=dict(color="red", dash="dash"),
-                    )
-                ],
-                annotations=[
-                    dict(
-                        x=len(kategorijas) - 0.3,
-                        y=40,
-                        text=f"Paredzētais progress: {paredzetais_progress:.1f}%",
-                        textangle=90,
-                        showarrow=False,
-                        font=dict(color="black"),
-                    )
-                ],
-            )
-
-            fig = go.Figure(data=[trace], layout=layout)
-            chart_div = plot(fig, auto_open=False, output_type="div")
-            grafiki.append(chart_div)
+            grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, title)
+            grafiki.append(grafiks)
 
     except UserVeikals.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
@@ -606,7 +539,7 @@ def veikalaPlans(request):
             key = kategoriju_atslegas[i]
             plans_val = veikala_kopa[f'{key}_plans']
             izpilde_val = veikala_kopa[f'{key}_izpilde']
-            progress_val = round(izpilde_val / plans_val * 100, 1) if plans_val else 0
+            progress_val = progresa_aprekins(plans_val, izpilde_val)
             
             tabulas_dati.append({
                 'kategorija': kategorija,
@@ -619,50 +552,8 @@ def veikalaPlans(request):
             realais.append(izpilde_val)
             progress.append(progress_val)
         
-        colors = ["green" if val >= paredzetais_progress else "red" for val in progress]
-        
-        text_labels = [
-            f"{a} / {b} ({v:.1f}%)" if b else f"{a} / 0 (0%)"
-            for a, b, v in zip(realais, planotais, progress)
-        ]
-        
-        trace = go.Bar(
-            x=kategorijas,
-            y=progress,
-            marker_color=colors,
-            text=text_labels,
-            textposition="auto",
-        )
 
-        
-        layout = go.Layout(
-            title=f"{veikals.nosaukums} — progress ({period_text})",
-            yaxis=dict(title="Izpilde (%)", range=[0, 120]),
-            title_x=0.5,
-            shapes=[
-                dict(
-                    type="line",
-                    x0=-0.5,
-                    x1=len(kategorijas),
-                    y0=paredzetais_progress,
-                    y1=paredzetais_progress,
-                    line=dict(color="red", dash="dash"),
-                )
-            ],
-            annotations=[
-                dict(
-                    x=len(kategorijas) - 0.3,
-                    y=40,
-                    text=f"Paredzētais progress: {paredzetais_progress:.1f}%",
-                    textangle=90,
-                    showarrow=False,
-                    font=dict(color="black"),
-                )
-            ],
-        )
-        
-        fig = go.Figure(data=[trace], layout=layout)
-        chart_div = plot(fig, auto_open=False, output_type="div")
+        grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, f"{veikals.nosaukums} — mēneša progress ({period_text})")
         
         # Ģenerē gadu un mēnešu sarakstu izvēlnēm
         patreizejais_datums_year = today.year
@@ -672,7 +563,7 @@ def veikalaPlans(request):
         context = {
             'veikals': veikals,
             'tabulas_dati': tabulas_dati,
-            'chart': chart_div,
+            'chart': grafiks,
             'paredzetais_progress': round(paredzetais_progress, 1),
             'period_text': period_text,
             'sakuma_menesis': sakuma_menesis,
