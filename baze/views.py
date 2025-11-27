@@ -429,8 +429,16 @@ def veikalaPlans(request):
     # izveido datumu objektus no mēnešiem un gadiem
     sakuma_datums = date(sakuma_gads, sakuma_menesis, 1)
     beigu_datums = date(beigu_gads, beigu_menesis, calendar.monthrange(beigu_gads, beigu_menesis)[1])
-    
-    
+
+    # Pārbauda vai beigu datums nav agrāks par sākuma datumu
+    if beigu_datums < sakuma_datums:
+        messages.warning(request, "Beigu datums nevar būt agrāks par sākuma datumu. Datumi tika apmainīti.")
+        # Apmaina datumus
+        sakuma_datums, beigu_datums = beigu_datums, sakuma_datums
+        sakuma_menesis, beigu_menesis = beigu_menesis, sakuma_menesis
+        sakuma_gads, beigu_gads = beigu_gads, sakuma_gads
+
+
     try:
         sakuma_menesis_obj = Menesis.objects.get(menesis_id=sakuma_menesis)
         beigu_menesis_obj = Menesis.objects.get(menesis_id=beigu_menesis)
@@ -455,17 +463,21 @@ def veikalaPlans(request):
         # Generate list of months in the date range
         menesi_intervala = aprekina_menesus_intervala(sakuma_datums, beigu_datums)
                 
-        veikala_kopa = {
-            'pieslegumi_plans': 0,
-            'pieslegumi_izpilde': 0,
-            'iekartas_plans': 0,
-            'iekartas_izpilde': 0,
-            'viedpaligi_plans': 0,
-            'viedpaligi_izpilde': 0,
-            'aksesuari_plans': 0,
-            'aksesuari_izpilde': 0,
-            'viedtelevizija_plans': 0,
-            'viedtelevizija_izpilde': 0,
+
+        veikala_plans = {
+            'pieslegumi': 0,
+            'iekartas': 0,
+            'viedpaligi': 0,
+            'aksesuari': 0,
+            'viedtelevizija': 0,
+        }
+
+        veikala_izpilde = {
+            'pieslegumi': 0,
+            'iekartas': 0,
+            'viedpaligi': 0,
+            'aksesuari': 0,
+            'viedtelevizija': 0,
         }
 
         veikala_proporcijas = {
@@ -479,8 +491,8 @@ def veikalaPlans(request):
         # Iegūst plānus un darījumus katram mēnesim un apkopo tos
         for month, year in menesi_intervala:
             plani = Plans.objects.filter(
-                lietotajs__userveikals__veikals=veikals, 
-                menesis=str(month), 
+                lietotajs__userveikals__veikals=veikals,
+                menesis__menesis_id=month,
                 gads=year
             )
 
@@ -504,17 +516,17 @@ def veikalaPlans(request):
 
                 darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
                 
-                veikala_kopa['pieslegumi_plans'] += (p.pieslegumi or 0)
-                veikala_kopa['iekartas_plans'] += (p.iekartas or 0)
-                veikala_kopa['viedpaligi_plans'] += (p.viedpaligi or 0)
-                veikala_kopa['aksesuari_plans'] += (p.aksesuari or 0)
-                veikala_kopa['viedtelevizija_plans'] += (p.viedtelevizija or 0)
+                veikala_plans['pieslegumi'] += (p.pieslegumi or 0)
+                veikala_plans['iekartas'] += (p.iekartas or 0)
+                veikala_plans['viedpaligi'] += (p.viedpaligi or 0)
+                veikala_plans['aksesuari'] += (p.aksesuari or 0)
+                veikala_plans['viedtelevizija'] += (p.viedtelevizija or 0)
                 
-                veikala_kopa['pieslegumi_izpilde'] += (darijumi['pieslegumi'] or 0)
-                veikala_kopa['iekartas_izpilde'] += (darijumi['iekartas'] or 0)
-                veikala_kopa['viedpaligi_izpilde'] += (darijumi['viedpaligi'] or 0)
-                veikala_kopa['aksesuari_izpilde'] += (darijumi['aksesuari'] or 0)
-                veikala_kopa['viedtelevizija_izpilde'] += (darijumi['viedtelevizija'] or 0)
+                veikala_izpilde['pieslegumi'] += (darijumi['pieslegumi'] or 0)
+                veikala_izpilde['iekartas'] += (darijumi['iekartas'] or 0)
+                veikala_izpilde['viedpaligi'] += (darijumi['viedpaligi'] or 0)
+                veikala_izpilde['aksesuari'] += (darijumi['aksesuari'] or 0)
+                veikala_izpilde['viedtelevizija'] += (darijumi['viedtelevizija'] or 0)
 
                 veikala_proporcijas['atv_iekartas'] += (darijumi['atv_iekarta'] or 0)
                 veikala_proporcijas['nom_iekartas'] += (darijumi['nom_iekarta'] or 0)
@@ -522,10 +534,10 @@ def veikalaPlans(request):
                 veikala_proporcijas['atv_plans'] += (p.atv_proporcija or 0)
                 veikala_proporcijas['apdr_plans'] += (p.apdr_proporcija or 0)
 
-        veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / planu_skaits) * 100 if plani else 0, 0)
-        veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / planu_skaits) * 100 if plani else 0, 0)
+        veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
+        veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
         veikala_proporcijas['atv_proporcija'] = round((veikala_proporcijas['atv_iekartas'] or 0) / ((veikala_proporcijas['atv_iekartas'] or 1) + (veikala_proporcijas['nom_iekartas'] or 1)) * 100, 1)
-        veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_kopa['iekartas_izpilde'] or 1) + (veikala_kopa['viedpaligi_izpilde'] or 1)) * 100, 1)
+        veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_izpilde['iekartas'] or 1) + (veikala_izpilde['viedpaligi'] or 1)) * 100, 1)
 
         kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
         kategoriju_atslegas = ['pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija']
@@ -537,17 +549,17 @@ def veikalaPlans(request):
         
         for i, kategorija in enumerate(kategorijas):
             key = kategoriju_atslegas[i]
-            plans_val = veikala_kopa[f'{key}_plans']
-            izpilde_val = veikala_kopa[f'{key}_izpilde']
-            progress_val = progresa_aprekins(plans_val, izpilde_val)
-            
+            plans_val = veikala_plans[key]
+            izpilde_val = veikala_izpilde[key]
+            progress_val = progresa_aprekins([izpilde_val], [plans_val])[0]
+
             tabulas_dati.append({
                 'kategorija': kategorija,
                 'izpilde': izpilde_val,
                 'plans': plans_val,
                 'progress': progress_val
             })
-            
+
             planotais.append(plans_val)
             realais.append(izpilde_val)
             progress.append(progress_val)
@@ -573,7 +585,7 @@ def veikalaPlans(request):
             'months': menesu_obj,
             'years': years,
             'veikala_proporcijas' : veikala_proporcijas,
-            'veikala_kopa': veikala_kopa,
+            'veikala_izpilde': veikala_izpilde,
         }
         
     except UserVeikals.DoesNotExist:
@@ -595,7 +607,7 @@ def veikalaPlans(request):
             'months': menesu_obj,
             'years': years,
             'veikala_proporcijas' : veikala_proporcijas,
-            'veikala_kopa': veikala_kopa,
+            'veikala_izpilde': veikala_izpilde,
         }
     
     return render(request, 'baze/veikala_plans.html', context)
