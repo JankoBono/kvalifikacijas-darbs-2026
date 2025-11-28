@@ -1,20 +1,15 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Sum, Avg
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
 from .models import Darijums, Plans, UserVeikals, Menesis
-from .utils import aprekini_veikala_dienas_datus, apreikina_paredzeto_progresu, aprekina_menesus_intervala, veido_grafiku, aprekina_ind_lig_proporcijas, progresa_aprekins
+from .utils import aprekina_veikala_dienas_datus, apreikina_paredzeto_progresu, aprekina_menesus_intervala, veido_grafiku, aprekina_ind_lig_proporcijas, aprekina_ind_darijumus, individualie_dati, aprekina_veikala_datus, veikala_grafika_dati, izveido_perioda_tekstu
 from .forms import DarijumsForm, PlansForm
 from datetime import date
 from dateutil.relativedelta import relativedelta
-import math
-import plotly.graph_objs as go
-from plotly.offline import plot
 import calendar
-
 
 def loginPage(request):
     """"
@@ -48,7 +43,6 @@ def loginPage(request):
     context = {}
     return render(request, 'baze/login_register.html', context)
 
-# Funkcija izlogojo no sistēmas
 def logoutUser(request):
     """"
     Lietotāja izlogošana no sistēmas.
@@ -62,7 +56,6 @@ def logoutUser(request):
     logout(request)
     return redirect('login')
 
-# Galvenā lapa pēc pieslēgšanās
 @login_required
 def index(request):
     """
@@ -77,23 +70,11 @@ def index(request):
     try:
         lietotaja_veikals = UserVeikals.objects.get(user=request.user).veikals
 
-        
         # Iegūst veikala dienas datus
-        
-        visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=lietotaja_veikals, datums__date=date.today())
-        veikala_dati = aprekini_veikala_dienas_datus(lietotaja_veikals)
+        veikala_dati = aprekina_veikala_dienas_datus(lietotaja_veikals)
 
         # Aprēķina individuālos darījumus priekš katra kolēģa individuālās tabulas
-        ind_darijumi = visi_darijums.values('lietotajs__username','lietotajs__first_name', 'lietotajs__last_name').annotate(
-            kopa_pieslegums=Sum('pieslegums'),
-            kopa_atv_iekarta=Sum('atv_iekarta'),
-            kopa_nom_iekarta=Sum('nom_iekarta'),
-            kopa_pil_iekarta=Sum('pil_iekarta'),
-            kopa_viedpaligs=Sum('viedpaligs'),
-            kopa_apdr_iekartas=Sum('apdr_iekartas'),
-            kopa_aksesuars=Sum('aksesuars'),
-            kopa_viedtelevizija=Sum('viedtelevizija')
-        )
+        ind_darijumi = aprekina_ind_darijumus(lietotaja_veikals)
         
         context = {
             'visi_summa': veikala_dati['visi_summa'],
@@ -111,8 +92,6 @@ def index(request):
     
     return render(request, 'baze/home.html', context)
 
-
-# Darījumu pievienošanas funkcija
 @login_required
 def addDarijums(request):
     """
@@ -137,7 +116,6 @@ def addDarijums(request):
     context = {'form': form}
     return render(request, 'baze/darijums_add.html', context)
 
-# Darījumu rediģēšanas funkcija
 @login_required
 def editDarijums(request, pk):
     """
@@ -162,7 +140,6 @@ def editDarijums(request, pk):
     context = {'form' : form}
     return render(request, 'baze/darijums_add.html', context)
 
-# Darījumu dzēšanas funkcija
 @login_required
 @require_POST
 def deleteDarijums(request, pk):
@@ -212,7 +189,6 @@ def maniDarijumi(request):
     context = {'darijumi': darijumi}
     return render(request, 'baze/mani_darijumi.html', context)
 
-# Plānu lapa ar grafikiem un individuālo progresu
 @login_required
 def planuLapa(request):
     """
@@ -233,80 +209,21 @@ def planuLapa(request):
             lietotajs__userveikals__veikals=veikals,
             menesis__menesis_id=today.month,
             gads=today.year
-            )
+        )
 
         kopa_dienas = calendar.monthrange(today.year, today.month)[1]
         paredzetais_progress = (today.day / kopa_dienas) * 100
         palikusas_dienas = kopa_dienas - today.day
 
-        grafiki = []
-        ind_progresa_dati = None
-
         proporcijas = aprekina_ind_lig_proporcijas(user)
 
-
-        # Izveido grafikus katram pārdevējam
-        for p in plani:
-            darijumi = Darijums.objects.filter(
-                lietotajs=p.lietotajs,
-                datums__month=today.month,
-                datums__year=today.year,
-            ).aggregate(
-                pieslegumi=Sum('pieslegums'),
-                atv_iekarta=Sum('atv_iekarta'),
-                nom_iekarta=Sum('nom_iekarta'),
-                pil_iekarta=Sum('pil_iekarta'),
-                viedpaligi=Sum('viedpaligs'),
-                aksesuari=Sum('aksesuars'),
-                viedtelevizija=Sum('viedtelevizija'),
-            )
-
-            darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
-
-            for key, val in darijumi.items():
-                darijumi[key] = val or 0
-
-            kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
-
-            planotais = [
-                p.pieslegumi or 0,
-                p.iekartas or 0,
-                p.viedpaligi or 0,
-                p.aksesuari or 0,
-                p.viedtelevizija or 0,
-            ]
-            realais = [
-                darijumi["pieslegumi"],
-                darijumi["iekartas"],
-                darijumi["viedpaligi"],
-                darijumi["aksesuari"],
-                darijumi["viedtelevizija"],
-            ]
-
-            progress = progresa_aprekins(realais, planotais)
-
-            if p.lietotajs == user:
-                ind_progresa_dati = []
-                for i, kategorija in enumerate(kategorijas):
-                    dienas_merkis = math.ceil((planotais[i] - realais[i]) / palikusas_dienas) if palikusas_dienas > 0 and planotais[i] > realais[i] else 0
-                    ind_progresa_dati.append({
-                        'kategorija': kategorija,
-                        'izpilde': realais[i],
-                        'plans': planotais[i],
-                        'progress': progress[i],
-                        'dienas_merkis': round(dienas_merkis, 2)
-                    })
-
-            title = f"{p.lietotajs.first_name} {p.lietotajs.last_name or p.lietotajs.username} — mēneša progress"
-
-            grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, title)
-            grafiki.append(grafiks)
+        ind_progresa_dati, grafiki = individualie_dati(plani, palikusas_dienas, paredzetais_progress, user) 
 
     except UserVeikals.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
         plani = Plans.objects.none()
         grafiki = []
-        ind_progresa_dati = None
+        ind_progresa_dati = []
         palikusas_dienas = 0
 
     context = {
@@ -318,7 +235,6 @@ def planuLapa(request):
         }
     return render(request, 'baze/plani.html', context)
 
-# Plānu pievienošanas funkcija
 @permission_required('baze.add_plans', raise_exception=True)
 @login_required
 def addPlans(request):
@@ -344,7 +260,6 @@ def addPlans(request):
     context = {'form': form}
     return render(request, 'baze/plans_add.html', context)
 
-# Plānu rediģēšanas funkcija
 @permission_required('baze.change_plans', raise_exception=True)
 @login_required
 def editPlans(request, pk):
@@ -370,7 +285,6 @@ def editPlans(request, pk):
     context = {'form' : form}
     return render(request, 'baze/plans_add.html', context)
 
-# Plānu dzēšanas funkcija
 @permission_required('baze.delete_plans', raise_exception=True)
 @login_required
 def deletePlans(request, pk):
@@ -394,7 +308,6 @@ def deletePlans(request, pk):
 
     return redirect('plani')
 
-# Veikala plānu lapa ar kopējo progresu un grafikiem
 @login_required
 def veikalaPlans(request):
     """
@@ -408,6 +321,11 @@ def veikalaPlans(request):
     """
     today = date.today()
     user = request.user
+
+    # Iegūst pieejamos gadus un mēnešus izvēlnēm
+    patreizejais_datums_gads = today.year
+    gadi = list(range(patreizejais_datums_gads - 2, patreizejais_datums_gads + 1))
+    menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
     
     # Iegūst datumu diapazonu no GET parametriem vai izmanto pašreizējo mēnesi un gadu
     sakuma_menesis = request.GET.get('sakuma_menesis', str(today.month))
@@ -426,7 +344,7 @@ def veikalaPlans(request):
         beigu_menesis = today.month
         beigu_gads = today.year
     
-    # izveido datumu objektus no mēnešiem un gadiem
+    # Izveido datumu objektus no mēnešiem un gadiem
     sakuma_datums = date(sakuma_gads, sakuma_menesis, 1)
     beigu_datums = date(beigu_gads, beigu_menesis, calendar.monthrange(beigu_gads, beigu_menesis)[1])
 
@@ -438,162 +356,42 @@ def veikalaPlans(request):
         sakuma_menesis, beigu_menesis = beigu_menesis, sakuma_menesis
         sakuma_gads, beigu_gads = beigu_gads, sakuma_gads
 
-
-    try:
-        sakuma_menesis_obj = Menesis.objects.get(menesis_id=sakuma_menesis)
-        beigu_menesis_obj = Menesis.objects.get(menesis_id=beigu_menesis)
-        
-        # Izveido perioda tekstu priekš grafika nosaukuma
-        if sakuma_menesis == beigu_menesis and sakuma_gads == beigu_gads:
-            period_text = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads}"
-        else:
-            period_text = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads} - {beigu_menesis_obj.nosaukums} {beigu_gads}"
-    except Menesis.DoesNotExist:
-        period_text = f"{sakuma_menesis}/{sakuma_gads} - {beigu_menesis}/{beigu_gads}"
-
+    perioda_tesks = izveido_perioda_tekstu(sakuma_menesis, beigu_menesis, sakuma_gads, beigu_gads)
 
     paredzetais_progress = apreikina_paredzeto_progresu(sakuma_datums, beigu_datums)
 
-    
-    
     try:
         user_veikals = UserVeikals.objects.get(user=user)
         veikals = user_veikals.veikals
         
-        # Generate list of months in the date range
         menesi_intervala = aprekina_menesus_intervala(sakuma_datums, beigu_datums)
                 
-
-        veikala_plans = {
-            'pieslegumi': 0,
-            'iekartas': 0,
-            'viedpaligi': 0,
-            'aksesuari': 0,
-            'viedtelevizija': 0,
-        }
-
-        veikala_izpilde = {
-            'pieslegumi': 0,
-            'iekartas': 0,
-            'viedpaligi': 0,
-            'aksesuari': 0,
-            'viedtelevizija': 0,
-        }
-
-        veikala_proporcijas = {
-            'atv_iekartas': 0,
-            'nom_iekartas': 0,
-            'apdr_iekartas': 0,
-            'atv_plans': 0,
-            'apdr_plans': 0,
-        }
-        planu_skaits = 0
-        # Iegūst plānus un darījumus katram mēnesim un apkopo tos
-        for month, year in menesi_intervala:
-            plani = Plans.objects.filter(
-                lietotajs__userveikals__veikals=veikals,
-                menesis__menesis_id=month,
-                gads=year
-            )
-
-            planu_skaits += len(plani)            
-
-            for p in plani:
-                darijumi = Darijums.objects.filter(
-                    lietotajs=p.lietotajs,
-                    datums__month=month,
-                    datums__year=year,
-                ).aggregate(
-                    pieslegumi=Sum('pieslegums'),
-                    atv_iekarta=Sum('atv_iekarta'),
-                    nom_iekarta=Sum('nom_iekarta'),
-                    pil_iekarta=Sum('pil_iekarta'),
-                    apdr_iekartas=Sum('apdr_iekartas'),
-                    viedpaligi=Sum('viedpaligs'),
-                    aksesuari=Sum('aksesuars'),
-                    viedtelevizija=Sum('viedtelevizija'),
-                )
-
-                darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
-                
-                veikala_plans['pieslegumi'] += (p.pieslegumi or 0)
-                veikala_plans['iekartas'] += (p.iekartas or 0)
-                veikala_plans['viedpaligi'] += (p.viedpaligi or 0)
-                veikala_plans['aksesuari'] += (p.aksesuari or 0)
-                veikala_plans['viedtelevizija'] += (p.viedtelevizija or 0)
-                
-                veikala_izpilde['pieslegumi'] += (darijumi['pieslegumi'] or 0)
-                veikala_izpilde['iekartas'] += (darijumi['iekartas'] or 0)
-                veikala_izpilde['viedpaligi'] += (darijumi['viedpaligi'] or 0)
-                veikala_izpilde['aksesuari'] += (darijumi['aksesuari'] or 0)
-                veikala_izpilde['viedtelevizija'] += (darijumi['viedtelevizija'] or 0)
-
-                veikala_proporcijas['atv_iekartas'] += (darijumi['atv_iekarta'] or 0)
-                veikala_proporcijas['nom_iekartas'] += (darijumi['nom_iekarta'] or 0)
-                veikala_proporcijas['apdr_iekartas'] += (darijumi['apdr_iekartas'] or 0)
-                veikala_proporcijas['atv_plans'] += (p.atv_proporcija or 0)
-                veikala_proporcijas['apdr_plans'] += (p.apdr_proporcija or 0)
-
-        veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
-        veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
-        veikala_proporcijas['atv_proporcija'] = round((veikala_proporcijas['atv_iekartas'] or 0) / ((veikala_proporcijas['atv_iekartas'] or 1) + (veikala_proporcijas['nom_iekartas'] or 1)) * 100, 1)
-        veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_izpilde['iekartas'] or 1) + (veikala_izpilde['viedpaligi'] or 1)) * 100, 1)
+        veikala_plans, veikala_izpilde, veikala_proporcijas = aprekina_veikala_datus(veikals, menesi_intervala)
 
         kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
-        kategoriju_atslegas = ['pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija']
-        
-        tabulas_dati = []
-        planotais = []
-        realais = []
-        progress = []
-        
-        for i, kategorija in enumerate(kategorijas):
-            key = kategoriju_atslegas[i]
-            plans_val = veikala_plans[key]
-            izpilde_val = veikala_izpilde[key]
-            progress_val = progresa_aprekins([izpilde_val], [plans_val])[0]
 
-            tabulas_dati.append({
-                'kategorija': kategorija,
-                'izpilde': izpilde_val,
-                'plans': plans_val,
-                'progress': progress_val
-            })
+        tabulas_dati, planotais, realais, progress = veikala_grafika_dati(veikala_plans, veikala_izpilde, kategorijas)
 
-            planotais.append(plans_val)
-            realais.append(izpilde_val)
-            progress.append(progress_val)
-        
-
-        grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, f"{veikals.nosaukums} — mēneša progress ({period_text})")
-        
-        # Ģenerē gadu un mēnešu sarakstu izvēlnēm
-        patreizejais_datums_year = today.year
-        years = list(range(patreizejais_datums_year - 2, patreizejais_datums_year + 1))  # 2 years before and after
-        menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
-        
+        grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, f"{veikals.nosaukums} — mēneša progress ({perioda_tesks})")
+                
         context = {
             'veikals': veikals,
             'tabulas_dati': tabulas_dati,
             'chart': grafiks,
             'paredzetais_progress': round(paredzetais_progress, 1),
-            'period_text': period_text,
+            'perioda_tesks': perioda_tesks,
             'sakuma_menesis': sakuma_menesis,
             'sakuma_gads': sakuma_gads,
             'beigu_menesis': beigu_menesis,
             'beigu_gads': beigu_gads,
-            'months': menesu_obj,
-            'years': years,
+            'menesi': menesu_obj,
+            'gadi': gadi,
             'veikala_proporcijas' : veikala_proporcijas,
             'veikala_izpilde': veikala_izpilde,
         }
         
     except UserVeikals.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
-        
-        patreizejais_datums_year = today.year
-        years = list(range(patreizejais_datums_year - 2, patreizejais_datums_year + 2))
-        menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
         
         context = {
             'veikals': None,
@@ -604,8 +402,8 @@ def veikalaPlans(request):
             'sakuma_gads': today.year,
             'beigu_menesis': today.month,
             'beigu_gads': today.year,
-            'months': menesu_obj,
-            'years': years,
+            'menesi': menesu_obj,
+            'gadi': gadi,
             'veikala_proporcijas' : veikala_proporcijas,
             'veikala_izpilde': veikala_izpilde,
         }

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
 CRON_CLASSES = [
     'baze.cron.SutitDienasAtskaiti',
+    'baze.cron.SutitMenesaAtskaiti',
 ]
 
 # Email configuration (example with Gmail)

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Veikala sistēma</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f97e3b;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        th {
+            background-color: #f97e3b;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .success {
+            color: #008000;
+            font-weight: bold;
+        }
+        .warning {
+            color: #FFA500;
+            font-weight: bold;
+        }
+        .danger {
+            color: #FF0000;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        .summary-box {
+            background-color: #fff9f6;
+            border-left: 4px solid #f97e3b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .stat-highlight {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f97e3b;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Mēneša kopsavilkums</h1>
+        <h3>{{ veikals_nosaukums }} / {{ menesis_nosaukums }} {{ gads }}</h3>
+    </div>
+
+    <div class="content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Kategorija</th>
+                    <th>Izpildīts</th>
+                    <th>Plāns</th>
+                    <th>Progress</th>
+                    <th>Statuss</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Pieslēgumi</strong></td>
+                    <td>{{ menesa_summa.kopa_pieslegumi|default:0 }}</td>
+                    <td>{{ menesa_plani.pieslegumi|default:0 }}</td>
+                    <td class="stat-highlight">{{ izpildes_procenti.pieslegumi|default:0 }}%</td>
+                    <td>
+                        {% if izpildes_procenti.pieslegumi >= 100 %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% elif izpildes_procenti.pieslegumi >= 80 %}
+                            <span class="warning">⚠ Tuvu mērķim</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Iekārtas</strong></td>
+                    <td>{{ menesa_summa.kopa_iekartas|default:0 }}</td>
+                    <td>{{ menesa_plani.iekartas|default:0 }}</td>
+                    <td class="stat-highlight">{{ izpildes_procenti.iekartas|default:0 }}%</td>
+                    <td>
+                        {% if izpildes_procenti.iekartas >= 100 %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% elif izpildes_procenti.iekartas >= 80 %}
+                            <span class="warning">⚠ Tuvu mērķim</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Viedpalīgi</strong></td>
+                    <td>{{ menesa_summa.kopa_viedpaligs|default:0 }}</td>
+                    <td>{{ menesa_plani.viedpaligi|default:0 }}</td>
+                    <td class="stat-highlight">{{ izpildes_procenti.viedpaligi|default:0 }}%</td>
+                    <td>
+                        {% if izpildes_procenti.viedpaligi >= 100 %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% elif izpildes_procenti.viedpaligi >= 80 %}
+                            <span class="warning">⚠ Tuvu mērķim</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Atvērtā līguma proporcija</strong></td>
+                    <td>{{ menesa_summa.atv_proporcija|default:0 }}%</td>
+                    <td>{{ menesa_plani.atvertais|default:0 }}%</td>
+                    <td class="stat-highlight">
+                        {% if menesa_plani.atvertais > 0 %}
+                            {{ menesa_summa.atv_proporcija|default:0|floatformat:1 }} / {{ menesa_plani.atvertais|floatformat:1 }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if menesa_summa.atv_proporcija >= menesa_plani.atvertais %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Apdrošināšanas proporcija</strong></td>
+                    <td>{{ menesa_summa.apdr_proporcija|default:0 }}%</td>
+                    <td>{{ menesa_plani.apdrosinasana|default:0 }}%</td>
+                    <td class="stat-highlight">
+                        {% if menesa_plani.apdrosinasana > 0 %}
+                            {{ menesa_summa.apdr_proporcija|default:0|floatformat:1 }} / {{ menesa_plani.apdrosinasana|floatformat:1 }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if menesa_summa.apdr_proporcija >= menesa_plani.apdrosinasana %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Aksesuāri</strong></td>
+                    <td>{{ menesa_summa.kopa_aksesuars|default:0 }}</td>
+                    <td>{{ menesa_plani.aksesuari|default:0 }}</td>
+                    <td class="stat-highlight">{{ izpildes_procenti.aksesuari|default:0 }}%</td>
+                    <td>
+                        {% if izpildes_procenti.aksesuari >= 100 %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% elif izpildes_procenti.aksesuari >= 80 %}
+                            <span class="warning">⚠ Tuvu mērķim</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Viedtelevīzijas</strong></td>
+                    <td>{{ menesa_summa.kopa_viedtelevizija|default:0 }}</td>
+                    <td>{{ menesa_plani.viedtelevizija|default:0 }}</td>
+                    <td class="stat-highlight">{{ izpildes_procenti.viedtelevizija|default:0 }}%</td>
+                    <td>
+                        {% if izpildes_procenti.viedtelevizija >= 100 %}
+                            <span class="success">✓ Sasniegts</span>
+                        {% elif izpildes_procenti.viedtelevizija >= 80 %}
+                            <span class="warning">⚠ Tuvu mērķim</span>
+                        {% else %}
+                            <span class="danger">✗ Zem mērķa</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>Šis ir automātisks mēneša kopsavilkuma ziņojums no pārdošanas uzskaites sistēmas.</p>
+            <p>Nosūtīts: {{ datums }} 22:00</p>
+        </div>
+    </div>
+</body>
+</html>

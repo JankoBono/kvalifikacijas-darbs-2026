@@ -6,7 +6,7 @@
     {% if veikals %}
     <div class="row mb-4">
         <div class="col-12">
-            <h2>{{ veikals.nosaukums }} — Veikala plāna progress</h2>
+            <h2 class="bg-light d-inline-block">{{ veikals.nosaukums }} — Veikala plāna progress</h2>
         </div>
     </div>
 
@@ -15,7 +15,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">Veikala kopsavilkums - {{ period_text }}</h4>
+                        <h4 class="mb-0">Veikala kopsavilkums - {{ perioda_tesks }}</h4>
                         <span class="badge bg-light text-dark" style="font-size: 1.1rem;">Paredzētais progress: {{ paredzetais_progress }}%</span>
                     </div>
                 </div>
@@ -65,8 +65,8 @@
                             <label for="sakuma_menesis" class="col-sm-5 col-form-label">Sākuma mēnesis:</label>
                             <div class="col-sm-7">
                                 <select name="sakuma_menesis" id="sakuma_menesis" class="form-select">
-                                    {% for month_num, month_name in months %}
-                                    <option value="{{ month_num }}" {% if month_num == sakuma_menesis %}selected{% endif %}>{{ month_name }}</option>
+                                    {% for menesa_nr, menesa_nosaukums in menesi %}
+                                    <option value="{{ menesa_nr }}" {% if menesa_nr == sakuma_menesis %}selected{% endif %}>{{ menesa_nosaukums }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -76,8 +76,8 @@
                             <label for="sakuma_gads" class="col-sm-5 col-form-label">Sākuma gads:</label>
                             <div class="col-sm-7">
                                 <select name="sakuma_gads" id="sakuma_gads" class="form-select">
-                                    {% for year in years %}
-                                    <option value="{{ year }}" {% if year == sakuma_gads %}selected{% endif %}>{{ year }}</option>
+                                    {% for gads in gadi %}
+                                    <option value="{{ gads }}" {% if gads == sakuma_gads %}selected{% endif %}>{{ gads }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -87,8 +87,8 @@
                             <label for="beigu_menesis" class="col-sm-5 col-form-label">Beigu mēnesis:</label>
                             <div class="col-sm-7">
                                 <select name="beigu_menesis" id="beigu_menesis" class="form-select">
-                                    {% for month_num, month_name in months %}
-                                    <option value="{{ month_num }}" {% if month_num == beigu_menesis %}selected{% endif %}>{{ month_name }}</option>
+                                    {% for menesa_nr, menesa_nosaukums in menesi %}
+                                    <option value="{{ menesa_nr }}" {% if menesa_nr == beigu_menesis %}selected{% endif %}>{{ menesa_nosaukums }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -98,8 +98,8 @@
                             <label for="beigu_gads" class="col-sm-5 col-form-label">Beigu gads:</label>
                             <div class="col-sm-7">
                                 <select name="beigu_gads" id="beigu_gads" class="form-select">
-                                    {% for year in years %}
-                                    <option value="{{ year }}" {% if year == beigu_gads %}selected{% endif %}>{{ year }}</option>
+                                    {% for gads in gadi %}
+                                    <option value="{{ gads }}" {% if gads == beigu_gads %}selected{% endif %}>{{ gads }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
