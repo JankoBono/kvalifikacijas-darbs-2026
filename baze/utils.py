@@ -1,6 +1,6 @@
 from datetime import date
 from django.db.models import Sum, Avg
-from .models import Darijums, Plans, Menesis
+from .models import StoreRecord, Plan, Month
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 import math
@@ -21,40 +21,40 @@ def aprekina_veikala_dienas_datus(veikals):
     menesa_sakums = today + relativedelta(day=1)
     vakardienas_datums = today - timedelta(days=1)
 
-    darijumi = Darijums.objects.filter(
-        lietotajs__userveikals__veikals=veikals,
-        datums__date=today
+    darijumi = StoreRecord.objects.filter(
+        user__userstore__store=veikals,
+        date__date=today
     )
 
     dienas_darijumi = aprekina_darijumu_summas(darijumi)
 
-    men_veikala_darijumi = Darijums.objects.filter(
-        lietotajs__userveikals__veikals=veikals,
-        datums__date__gte=menesa_sakums,
-        datums__date__lte=vakardienas_datums,
+    men_veikala_darijumi = StoreRecord.objects.filter(
+        user__userstore__store=veikals,
+        date__date__gte=menesa_sakums,
+        date__date__lte=vakardienas_datums,
     )
 
     veikala_men_summa = aprekina_darijumu_summas(men_veikala_darijumi)
 
     #Izfiltrē visus veikala plānus priekš mēneša dienas mērķa aprēķina
-    menesis_tagad = Menesis.objects.get(menesis_id=today.month)
+    current_month = Month.objects.get(month_id=today.month)
 
-    visi_plani = Plans.objects.filter(
-        lietotajs__userveikals__veikals=veikals,
-        menesis=menesis_tagad,
-        gads=today.year
+    visi_plani = Plan.objects.filter(
+        user__userstore__store=veikals,
+        month=current_month,
+        year=today.year
     )
 
     if visi_plani.exists():
         # Apvieno visus plānus un aprēķina to summas
         plan_sum = visi_plani.aggregate(
-            kopa_pieslegumi=Sum('pieslegumi'),
-            kopa_iekartas=Sum('iekartas'),
-            kopa_viedpaligi=Sum('viedpaligi'),
-            kopa_aksesuari=Sum('aksesuari'),
-            kopa_viedtelevizija=Sum('viedtelevizija'),
-            kopa_apdr_prop = Avg('apdr_proporcija'),
-            kopa_atv_prop = Avg('atv_proporcija'),
+            kopa_pieslegumi=Sum('services'),
+            kopa_iekartas=Sum('devices'),
+            kopa_viedpaligi=Sum('gadgets'),
+            kopa_aksesuari=Sum('accessories'),
+            kopa_viedtelevizija=Sum('smart_tv'),
+            kopa_apdr_prop = Avg('insurance_ratio'),
+            kopa_atv_prop = Avg('open_ratio'),
         )
 
         # Aprēķina dienas mērķi katrai kategorijai
@@ -71,8 +71,8 @@ def aprekina_veikala_dienas_datus(veikals):
         dienas_merkis = {}
 
     return {
-        'veikals': veikals,
-        'datums': today,
+        'store': veikals,
+        'date': today,
         'visi_summa': dienas_darijumi,
         'dienas_merkis': dienas_merkis,
     }
@@ -91,61 +91,61 @@ def aprekina_veikala_menesa_datus(veikals):
     menesa_sakums = today + relativedelta(day=1)
 
     # Iegūst visus mēneša darījumus
-    menesa_darijumi = Darijums.objects.filter(
-        lietotajs__userveikals__veikals=veikals,
-        datums__date__gte=menesa_sakums,
-        datums__date__lte=today,
+    menesa_darijumi = StoreRecord.objects.filter(
+        user__userstore__store=veikals,
+        date__date__gte=menesa_sakums,
+        date__date__lte=today,
     )
 
     menesa_summa = aprekina_darijumu_summas(menesa_darijumi)
 
     # Iegūst mēneša plānus
-    menesis_tagad = Menesis.objects.get(menesis_id=today.month)
-    visi_plani = Plans.objects.filter(
-        lietotajs__userveikals__veikals=veikals,
-        menesis=menesis_tagad,
-        gads=today.year
+    current_month = Month.objects.get(month_id=today.month)
+    visi_plani = Plan.objects.filter(
+        user__userstore__store=veikals,
+        month=current_month,
+        year=today.year
     )
 
     if visi_plani.exists():
         # Apvieno visus plānus
         plan_sum = visi_plani.aggregate(
-            kopa_pieslegumi=Sum('pieslegumi'),
-            kopa_iekartas=Sum('iekartas'),
-            kopa_viedpaligi=Sum('viedpaligi'),
-            kopa_aksesuari=Sum('aksesuari'),
-            kopa_viedtelevizija=Sum('viedtelevizija'),
-            kopa_apdr_prop=Avg('apdr_proporcija'),
-            kopa_atv_prop=Avg('atv_proporcija'),
+            kopa_pieslegumi=Sum('services'),
+            kopa_iekartas=Sum('devices'),
+            kopa_viedpaligi=Sum('gadgets'),
+            kopa_aksesuari=Sum('accessories'),
+            kopa_viedtelevizija=Sum('smart_tv'),
+            kopa_apdr_prop=Avg('insurance_ratio'),
+            kopa_atv_prop=Avg('open_ratio'),
         )
 
         # Aprēķina izpildes procentus
         menesa_plani = {
-            'pieslegumi': plan_sum['kopa_pieslegumi'] or 0,
-            'iekartas': plan_sum['kopa_iekartas'] or 0,
-            'viedpaligi': plan_sum['kopa_viedpaligi'] or 0,
-            'aksesuari': plan_sum['kopa_aksesuari'] or 0,
-            'viedtelevizija': plan_sum['kopa_viedtelevizija'] or 0,
+            'services': plan_sum['kopa_pieslegumi'] or 0,
+            'devices': plan_sum['kopa_iekartas'] or 0,
+            'gadgets': plan_sum['kopa_viedpaligi'] or 0,
+            'accessories': plan_sum['kopa_aksesuari'] or 0,
+            'smart_tv': plan_sum['kopa_viedtelevizija'] or 0,
             'atvertais': round((plan_sum['kopa_atv_prop'] or 0) * 100, 1),
             'apdrosinasana': round((plan_sum['kopa_apdr_prop'] or 0) * 100, 1),
         }
 
         # Aprēķina progress
         izpildes_procenti = {
-            'pieslegumi': round((menesa_summa.get('kopa_pieslegumi', 0) / menesa_plani['pieslegumi'] * 100) if menesa_plani['pieslegumi'] > 0 else 0, 1),
-            'iekartas': round((menesa_summa.get('kopa_iekartas', 0) / menesa_plani['iekartas'] * 100) if menesa_plani['iekartas'] > 0 else 0, 1),
-            'viedpaligi': round((menesa_summa.get('kopa_viedpaligs', 0) / menesa_plani['viedpaligi'] * 100) if menesa_plani['viedpaligi'] > 0 else 0, 1),
-            'aksesuari': round((menesa_summa.get('kopa_aksesuars', 0) / menesa_plani['aksesuari'] * 100) if menesa_plani['aksesuari'] > 0 else 0, 1),
-            'viedtelevizija': round((menesa_summa.get('kopa_viedtelevizija', 0) / menesa_plani['viedtelevizija'] * 100) if menesa_plani['viedtelevizija'] > 0 else 0, 1),
+            'services': round((menesa_summa.get('kopa_pieslegumi', 0) / menesa_plani['services'] * 100) if menesa_plani['services'] > 0 else 0, 1),
+            'devices': round((menesa_summa.get('kopa_iekartas', 0) / menesa_plani['devices'] * 100) if menesa_plani['devices'] > 0 else 0, 1),
+            'gadgets': round((menesa_summa.get('kopa_viedpaligs', 0) / menesa_plani['gadgets'] * 100) if menesa_plani['gadgets'] > 0 else 0, 1),
+            'accessories': round((menesa_summa.get('kopa_aksesuars', 0) / menesa_plani['accessories'] * 100) if menesa_plani['accessories'] > 0 else 0, 1),
+            'smart_tv': round((menesa_summa.get('kopa_viedtelevizija', 0) / menesa_plani['smart_tv'] * 100) if menesa_plani['smart_tv'] > 0 else 0, 1),
         }
     else:
         menesa_plani = {}
         izpildes_procenti = {}
 
     return {
-        'veikals': veikals,
-        'datums': today,
-        'menesis_nosaukums': menesis_tagad.nosaukums if visi_plani.exists() else '',
+        'store': veikals,
+        'date': today,
+        'month_name': current_month.name if visi_plani.exists() else '',
         'menesa_summa': menesa_summa,
         'menesa_plani': menesa_plani,
         'izpildes_procenti': izpildes_procenti,
@@ -179,14 +179,14 @@ def aprekina_darijumu_summas(darijumi):
         return {}
 
     rezultats = darijumi.aggregate(
-        kopa_pieslegumi=Sum('pieslegums'),
-        kopa_atv_iekarta=Sum('atv_iekarta'),
-        kopa_nom_iekarta=Sum('nom_iekarta'),
-        kopa_pil_iekarta=Sum('pil_iekarta'),
-        kopa_viedpaligs=Sum('viedpaligs'),
-        kopa_aksesuars=Sum('aksesuars'),
-        kopa_viedtelevizija=Sum('viedtelevizija'),
-        kopa_apdr_iekartas=Sum('apdr_iekartas'),
+        kopa_pieslegumi=Sum('service'),
+        kopa_atv_iekarta=Sum('open_device'),
+        kopa_nom_iekarta=Sum('installment_device'),
+        kopa_pil_iekarta=Sum('full_price_device'),
+        kopa_viedpaligs=Sum('gadget'),
+        kopa_aksesuars=Sum('accessory'),
+        kopa_viedtelevizija=Sum('smart_tv'),
+        kopa_apdr_iekartas=Sum('insured_devices'),
     )
 
     atv = rezultats.get('kopa_atv_iekarta') or 0
@@ -200,15 +200,15 @@ def aprekina_darijumu_summas(darijumi):
 
     # Aprēķina atvērto iekārtu proporciju
     if atv + nom != 0:
-        rezultats['atv_proporcija'] = round(atv / (atv + nom), 2) * 100
+        rezultats['open_ratio'] = round(atv / (atv + nom), 2) * 100
     else:
-        rezultats['atv_proporcija'] = 0
+        rezultats['open_ratio'] = 0
 
     # Aprēķina apdrošināto iekārtu proporciju
     if atv + nom + pil + vied != 0:
-        rezultats['apdr_proporcija'] = round(apdr / (atv + nom + pil + vied), 2) * 100
+        rezultats['insurance_ratio'] = round(apdr / (atv + nom + pil + vied), 2) * 100
     else:
-        rezultats['apdr_proporcija'] = 0
+        rezultats['insurance_ratio'] = 0
 
     return rezultats
 
@@ -326,31 +326,30 @@ def aprekina_ind_lig_proporcijas(user):
         dict: Vārdnīca ar individuālā līguma proporcijām
     """
     today = date.today()
-    prop_plans = Plans.objects.filter(
-        lietotajs=user,
-        menesis__menesis_id=today.month,
-        gads=today.year
+    prop_plans = Plan.objects.filter(
+        user=user,
+        month__month_id=today.month,
+        year=today.year
     )
 
-    proporcijas = Darijums.objects.filter(
-        lietotajs=user,
-        datums__month=today.month,
-        datums__year=today.year,
+    proporcijas = StoreRecord.objects.filter(
+        user=user,
+        date__month=today.month,
+        date__year=today.year,
     ).aggregate(
-        atv_iekartas=Sum('atv_iekarta'),
-        apdr_iekartas=Sum('apdr_iekartas'),
-        atv_iekarta=Sum('atv_iekarta'),
-        nom_iekarta=Sum('nom_iekarta'),
-        pil_iekarta=Sum('pil_iekarta'),
-        viedpaligi=Sum('viedpaligs'),
+        apdr_iekartas=Sum('insured_devices'),
+        atv_iekartas=Sum('open_device'),
+        nomaksas_iekartas=Sum('installment_device'),
+        pilnas_summas_iekartas=Sum('full_price_device'),
+        viedpaligi=Sum('gadget'),
     )
 
-    proporcijas['iekartas'] = (proporcijas['atv_iekarta'] or 0) + (proporcijas['nom_iekarta'] or 0) + (proporcijas['pil_iekarta'] or 0)
+    proporcijas['iekartas'] = (proporcijas['atv_iekartas'] or 0) + (proporcijas['nomaksas_iekartas'] or 0) + (proporcijas['pilnas_summas_iekartas'] or 0)
 
-    proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) - (proporcijas['pil_iekarta'] or 0)) * 100, 1)
+    proporcijas['atv_proporcija'] = round((proporcijas['atv_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) - (proporcijas['pilnas_summas_iekartas'] or 0)) * 100, 1)
     proporcijas['apdr_proporcija'] = round((proporcijas['apdr_iekartas'] or 0) / ((proporcijas['iekartas'] or 1) + (proporcijas['viedpaligi'] or 1)) * 100, 1)
-    proporcijas['atv_plans'] = round((prop_plans.aggregate(Avg('atv_proporcija'))['atv_proporcija__avg'] or 0) * 100, 0)
-    proporcijas['apdr_plans'] = round((prop_plans.aggregate(Avg('apdr_proporcija'))['apdr_proporcija__avg'] or 0) * 100, 0)
+    proporcijas['atv_plans'] = round((prop_plans.aggregate(Avg('open_ratio'))['open_ratio__avg'] or 0) * 100, 0)
+    proporcijas['apdr_plans'] = round((prop_plans.aggregate(Avg('insurance_ratio'))['insurance_ratio__avg'] or 0) * 100, 0)
 
     return proporcijas
 
@@ -384,17 +383,17 @@ def aprekina_ind_darijumus(lietotaja_veikals):
         QuerySet: Individuālo darījumu dati ar apkopotām summām katram lietotājam
     """
 
-    visi_darijums = Darijums.objects.filter(lietotajs__userveikals__veikals=lietotaja_veikals, datums__date=date.today())
+    visi_darijums = StoreRecord.objects.filter(user__userstore__store=lietotaja_veikals, date__date=date.today())
 
-    ind_darijumi = visi_darijums.values('lietotajs__username','lietotajs__first_name', 'lietotajs__last_name').annotate(
-        kopa_pieslegums=Sum('pieslegums'),
-        kopa_atv_iekarta=Sum('atv_iekarta'),
-        kopa_nom_iekarta=Sum('nom_iekarta'),
-        kopa_pil_iekarta=Sum('pil_iekarta'),
-        kopa_viedpaligs=Sum('viedpaligs'),
-        kopa_apdr_iekartas=Sum('apdr_iekartas'),
-        kopa_aksesuars=Sum('aksesuars'),
-        kopa_viedtelevizija=Sum('viedtelevizija')
+    ind_darijumi = visi_darijums.values('user__username','user__first_name', 'user__last_name').annotate(
+        kopa_pieslegums=Sum('service'),
+        kopa_atv_iekarta=Sum('open_device'),
+        kopa_nom_iekarta=Sum('installment_device'),
+        kopa_pil_iekarta=Sum('full_price_device'),
+        kopa_viedpaligs=Sum('gadget'),
+        kopa_apdr_iekartas=Sum('insured_devices'),
+        kopa_aksesuars=Sum('accessory'),
+        kopa_viedtelevizija=Sum('smart_tv')
     )
 
     return ind_darijumi
@@ -416,21 +415,21 @@ def individualie_dati(plani, palikusas_dienas, paredzetais_progress, user):
     ind_progresa_dati = []
     grafiki = []
     for p in plani:
-        darijumi = Darijums.objects.filter(
-            lietotajs=p.lietotajs,
-            datums__month=today.month,
-            datums__year=today.year,
+        darijumi = StoreRecord.objects.filter(
+            user=p.user,
+            date__month=today.month,
+            date__year=today.year,
         ).aggregate(
-            pieslegumi=Sum('pieslegums'),
-            atv_iekarta=Sum('atv_iekarta'),
-            nom_iekarta=Sum('nom_iekarta'),
-            pil_iekarta=Sum('pil_iekarta'),
-            viedpaligi=Sum('viedpaligs'),
-            aksesuari=Sum('aksesuars'),
-            viedtelevizija=Sum('viedtelevizija'),
+            services=Sum('service'),
+            open_device=Sum('open_device'),
+            installment_device=Sum('installment_device'),
+            full_price_device=Sum('full_price_device'),
+            gadgets=Sum('gadget'),
+            accessories=Sum('accessory'),
+            smart_tv=Sum('smart_tv'),
         )
 
-        darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
+        darijumi['devices'] = (darijumi['open_device'] or 0) + (darijumi['installment_device'] or 0) + (darijumi['full_price_device'] or 0)
 
         for key, val in darijumi.items():
             darijumi[key] = val or 0
@@ -438,23 +437,23 @@ def individualie_dati(plani, palikusas_dienas, paredzetais_progress, user):
         kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
 
         planotais = [
-            p.pieslegumi or 0,
-            p.iekartas or 0,
-            p.viedpaligi or 0,
-            p.aksesuari or 0,
-            p.viedtelevizija or 0,
+            p.services or 0,
+            p.devices or 0,
+            p.gadgets or 0,
+            p.accessories or 0,
+            p.smart_tv or 0,
         ]
         realais = [
-            darijumi["pieslegumi"],
-            darijumi["iekartas"],
-            darijumi["viedpaligi"],
-            darijumi["aksesuari"],
-            darijumi["viedtelevizija"],
+            darijumi['services'],
+            darijumi['devices'],
+            darijumi['gadgets'],
+            darijumi['accessories'],
+            darijumi['smart_tv'],
         ]
 
         progress = progresa_aprekins(realais, planotais)
 
-        if p.lietotajs == user:
+        if p.user == user:
             ind_progresa_dati = []
             for i, kategorija in enumerate(kategorijas):
                 dienas_merkis = math.ceil((planotais[i] - realais[i]) / palikusas_dienas) if palikusas_dienas > 0 and planotais[i] > realais[i] else 0
@@ -466,7 +465,7 @@ def individualie_dati(plani, palikusas_dienas, paredzetais_progress, user):
                     'dienas_merkis': round(dienas_merkis, 2)
                 })
 
-        title = f"{p.lietotajs.first_name} {p.lietotajs.last_name or p.lietotajs.username} — mēneša progress"
+        title = f"{p.user.first_name} {p.user.last_name or p.user.username} — mēneša progress"
 
         grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, title)
         grafiki.append(grafiks)
@@ -485,19 +484,19 @@ def aprekina_veikala_datus(veikals, menesi_intervala):
         tuple: Vārdnīcas ar veikala plāniem, izpildi un proporcijām
     """
     veikala_plans = {
-        'pieslegumi': 0,
-        'iekartas': 0,
-        'viedpaligi': 0,
-        'aksesuari': 0,
-        'viedtelevizija': 0,
+        'services': 0,
+        'devices': 0,
+        'gadgets': 0,
+        'accessories': 0,
+        'smart_tv': 0,
     }
 
     veikala_izpilde = {
-        'pieslegumi': 0,
-        'iekartas': 0,
-        'viedpaligi': 0,
-        'aksesuari': 0,
-        'viedtelevizija': 0,
+        'services': 0,
+        'devices': 0,
+        'gadgets': 0,
+        'accessories': 0,
+        'smart_tv': 0,
     }
 
     veikala_proporcijas = {
@@ -510,54 +509,54 @@ def aprekina_veikala_datus(veikals, menesi_intervala):
     planu_skaits = 0
     # Iegūst plānus un darījumus katram mēnesim un apkopo tos
     for month, year in menesi_intervala:
-        plani = Plans.objects.filter(
-            lietotajs__userveikals__veikals=veikals,
-            menesis__menesis_id=month,
-            gads=year
+        plani = Plan.objects.filter(
+            user__userstore__store=veikals,
+            month__month_id=month,
+            year=year
         )
 
         planu_skaits += len(plani)            
 
         for p in plani:
-            darijumi = Darijums.objects.filter(
-                lietotajs=p.lietotajs,
-                datums__month=month,
-                datums__year=year,
+            darijumi = StoreRecord.objects.filter(
+                user=p.user,
+                date__month=month,
+                date__year=year,
             ).aggregate(
-                pieslegumi=Sum('pieslegums'),
-                atv_iekarta=Sum('atv_iekarta'),
-                nom_iekarta=Sum('nom_iekarta'),
-                pil_iekarta=Sum('pil_iekarta'),
-                apdr_iekartas=Sum('apdr_iekartas'),
-                viedpaligi=Sum('viedpaligs'),
-                aksesuari=Sum('aksesuars'),
-                viedtelevizija=Sum('viedtelevizija'),
+                services=Sum('service'),
+                open_device=Sum('open_device'),
+                installment_device=Sum('installment_device'),
+                full_price_device=Sum('full_price_device'),
+                insured_devices=Sum('insured_devices'),
+                gadgets=Sum('gadget'),
+                accessories=Sum('accessory'),
+                smart_tv=Sum('smart_tv'),
             )
 
-            darijumi['iekartas'] = (darijumi['atv_iekarta'] or 0) + (darijumi['nom_iekarta'] or 0) + (darijumi['pil_iekarta'] or 0)
+            darijumi['devices'] = (darijumi['open_device'] or 0) + (darijumi['installment_device'] or 0) + (darijumi['full_price_device'] or 0)
             
-            veikala_plans['pieslegumi'] += (p.pieslegumi or 0)
-            veikala_plans['iekartas'] += (p.iekartas or 0)
-            veikala_plans['viedpaligi'] += (p.viedpaligi or 0)
-            veikala_plans['aksesuari'] += (p.aksesuari or 0)
-            veikala_plans['viedtelevizija'] += (p.viedtelevizija or 0)
+            veikala_plans['services'] += (p.services or 0)
+            veikala_plans['devices'] += (p.devices or 0)
+            veikala_plans['gadgets'] += (p.gadgets or 0)
+            veikala_plans['accessories'] += (p.accessories or 0)
+            veikala_plans['smart_tv'] += (p.smart_tv or 0)
             
-            veikala_izpilde['pieslegumi'] += (darijumi['pieslegumi'] or 0)
-            veikala_izpilde['iekartas'] += (darijumi['iekartas'] or 0)
-            veikala_izpilde['viedpaligi'] += (darijumi['viedpaligi'] or 0)
-            veikala_izpilde['aksesuari'] += (darijumi['aksesuari'] or 0)
-            veikala_izpilde['viedtelevizija'] += (darijumi['viedtelevizija'] or 0)
+            veikala_izpilde['services'] += (darijumi['services'] or 0)
+            veikala_izpilde['devices'] += (darijumi['devices'] or 0)
+            veikala_izpilde['gadgets'] += (darijumi['gadgets'] or 0)
+            veikala_izpilde['accessories'] += (darijumi['accessories'] or 0)
+            veikala_izpilde['smart_tv'] += (darijumi['smart_tv'] or 0)
 
-            veikala_proporcijas['atv_iekartas'] += (darijumi['atv_iekarta'] or 0)
-            veikala_proporcijas['nom_iekartas'] += (darijumi['nom_iekarta'] or 0)
-            veikala_proporcijas['apdr_iekartas'] += (darijumi['apdr_iekartas'] or 0)
-            veikala_proporcijas['atv_plans'] += (p.atv_proporcija or 0)
-            veikala_proporcijas['apdr_plans'] += (p.apdr_proporcija or 0)
+            veikala_proporcijas['atv_iekartas'] += (darijumi['open_device'] or 0)
+            veikala_proporcijas['nom_iekartas'] += (darijumi['installment_device'] or 0)
+            veikala_proporcijas['apdr_iekartas'] += (darijumi['insured_devices'] or 0)
+            veikala_proporcijas['atv_plans'] += (p.open_ratio or 0)
+            veikala_proporcijas['apdr_plans'] += (p.insurance_ratio or 0)
 
     veikala_proporcijas['atv_plans'] = round((veikala_proporcijas['atv_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
     veikala_proporcijas['apdr_plans'] = round((veikala_proporcijas['apdr_plans'] / planu_skaits) * 100 if planu_skaits > 0 else 0, 0)
     veikala_proporcijas['atv_proporcija'] = round((veikala_proporcijas['atv_iekartas'] or 0) / ((veikala_proporcijas['atv_iekartas'] or 1) + (veikala_proporcijas['nom_iekartas'] or 1)) * 100, 1)
-    veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_izpilde['iekartas'] or 1) + (veikala_izpilde['viedpaligi'] or 1)) * 100, 1)
+    veikala_proporcijas['apdr_proporcija'] = round((veikala_proporcijas['apdr_iekartas'] or 0) / ((veikala_izpilde['devices'] or 1) + (veikala_izpilde['gadgets'] or 1)) * 100, 1)
 
     return veikala_plans, veikala_izpilde, veikala_proporcijas
 
@@ -573,7 +572,7 @@ def veikala_grafika_dati(veikala_plans, veikala_izpilde, kategorijas):
     Atgriež:
         tuple: Saraksts ar tabulas datiem, plānoto izpildi, reālo izpildi un progresu katrai kategorijai
     """
-    kategoriju_atslegas = ['pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija']
+    kategoriju_atslegas = ['services', 'devices', 'gadgets', 'accessories', 'smart_tv']
     
     tabulas_dati = []
     planotais = []
@@ -613,15 +612,15 @@ def izveido_perioda_tekstu(sakuma_menesis, beigu_menesis, sakuma_gads, beigu_gad
         str: Perioda teksts grafika nosaukumam
     """
     try:
-        sakuma_menesis_obj = Menesis.objects.get(menesis_id=sakuma_menesis)
-        beigu_menesis_obj = Menesis.objects.get(menesis_id=beigu_menesis)
+        sakuma_menesis_obj = Month.objects.get(month_id=sakuma_menesis)
+        beigu_menesis_obj = Month.objects.get(month_id=beigu_menesis)
         
         # Izveido perioda tekstu priekš grafika nosaukuma
         if sakuma_menesis == beigu_menesis and sakuma_gads == beigu_gads:
-            perioda_teksts = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads}"
+            perioda_teksts = f"{sakuma_menesis_obj.name} {sakuma_gads}"
         else:
-            perioda_teksts = f"{sakuma_menesis_obj.nosaukums} {sakuma_gads} - {beigu_menesis_obj.nosaukums} {beigu_gads}"
-    except Menesis.DoesNotExist:
+            perioda_teksts = f"{sakuma_menesis_obj.name} {sakuma_gads} - {beigu_menesis_obj.name} {beigu_gads}"
+    except Month.DoesNotExist:
         perioda_teksts = f"{sakuma_menesis}/{sakuma_gads} - {beigu_menesis}/{beigu_gads}"
 
     return perioda_teksts

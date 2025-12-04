@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='plans',
             name='menesis',
-            field=models.ForeignKey(default=baze.models.menesis_tagad, null=True, on_delete=django.db.models.deletion.SET_NULL, to='baze.menesis'),
+            field=models.ForeignKey(default=baze.models.current_month, null=True, on_delete=django.db.models.deletion.SET_NULL, to='baze.menesis'),
         ),
     ]

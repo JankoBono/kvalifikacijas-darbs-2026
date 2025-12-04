@@ -6,7 +6,7 @@ from django.utils.html import strip_tags
 from django.contrib.auth.models import User
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from .models import Veikals
+from .models import Store
 from .utils import aprekina_veikala_dienas_datus, aprekina_veikala_menesa_datus
 
 class SutitDienasAtskaiti(CronJobBase):
@@ -16,16 +16,19 @@ class SutitDienasAtskaiti(CronJobBase):
     code = 'baze.sutit_dienas_atskaiti'  
     
     def do(self):
+        """
+        Sūta dienas kopsavilkuma e-pastu visiem veikalu vadītājiem katru dienu.
+        """
         today = date.today()
         
         # Iegūst visus veikalus
-        veikali = Veikals.objects.all()
+        veikali = Store.objects.all()
         
         for veikals in veikali:
             # Iegūst Vadītājs lietotājus šim veikalam
             vaditaji = User.objects.filter(
                 groups__name='Vadītājs',
-                userveikals__veikals=veikals
+                userstore__store=veikals
             )
                         
             if not vaditaji.exists():
@@ -36,8 +39,8 @@ class SutitDienasAtskaiti(CronJobBase):
             
             # Sagatavo kontekstu e-pasta veidnei
             context = {
-                'veikals_nosaukums': veikals.nosaukums,
-                'datums': today.strftime('%d.%m.%Y'),
+                'veikals_nosaukums': veikals.name,
+                'date': today.strftime('%d.%m.%Y'),
                 'visi_summa': veikala_dati['visi_summa'],
                 'dienas_merkis': veikala_dati['dienas_merkis'],
             }
@@ -50,18 +53,18 @@ class SutitDienasAtskaiti(CronJobBase):
             sanemeju_epasti = [lietotajs.email for lietotajs in vaditaji if lietotajs.email]
             
             if sanemeju_epasti:
-                print(f"Nosūta dienas kopsavilkuma e-pastu veikalam {veikals.nosaukums} uz {sanemeju_epasti}")
+                print(f"Nosūta dienas kopsavilkuma e-pastu veikalam {veikals.name} uz {sanemeju_epasti}")
                 send_mail(
-                    subject=f'Dienas kopsavilkums - {veikals.nosaukums} - {today.strftime("%d.%m.%Y")}',
+                    subject=f'Dienas kopsavilkums - {veikals.name} - {today.strftime("%d.%m.%Y")}',
                     message=teksta_zinojums,
                     from_email=None,  # Izmanto DEFAULT_FROM_EMAIL
                     recipient_list=sanemeju_epasti,
                     html_message=html_zinojums,
                     fail_silently=False,
                 )
-                print(f"E-pasts veiksmīgi nosūtīts veikalam {veikals.nosaukums}")
+                print(f"E-pasts veiksmīgi nosūtīts veikalam {veikals.name}")
             else:
-                print(f"Nav e-pasta adrešu vadītājiem veikalam {veikals.nosaukums}")
+                print(f"Nav e-pasta adrešu vadītājiem veikalam {veikals.name}")
 
 class SutitMenesaAtskaiti(CronJobBase):
     RUN_ON_DAYS = [28, 29, 30, 31]  # Iespējamās mēneša pēdējās dienas
@@ -71,6 +74,9 @@ class SutitMenesaAtskaiti(CronJobBase):
     code = 'baze.sutit_menesa_atskaiti'
 
     def do(self):
+        """
+        Sūta mēneša kopsavilkuma e-pastu visiem veikalu vadītājiem mēneša pēdējā dienā.
+        """
         today = date.today()
 
         # Pārbauda vai šodien ir mēneša pēdējā diena
@@ -80,13 +86,13 @@ class SutitMenesaAtskaiti(CronJobBase):
         #     return
 
         # Iegūst visus veikalus
-        veikali = Veikals.objects.all()
+        veikali = Store.objects.all()
 
         for veikals in veikali:
             # Iegūst Vadītājs lietotājus šim veikalam
             vaditaji = User.objects.filter(
                 groups__name='Vadītājs',
-                userveikals__veikals=veikals
+                userstore__store=veikals
             )
 
             if not vaditaji.exists():
@@ -97,10 +103,10 @@ class SutitMenesaAtskaiti(CronJobBase):
 
             # Sagatavo kontekstu e-pasta veidnei
             context = {
-                'veikals_nosaukums': veikals.nosaukums,
-                'datums': today.strftime('%d.%m.%Y'),
+                'veikals_nosaukums': veikals.name,
+                'date': today.strftime('%d.%m.%Y'),
                 'menesis_nosaukums': veikala_dati['menesis_nosaukums'],
-                'gads': today.year,
+                'year': today.year,
                 'menesa_summa': veikala_dati['menesa_summa'],
                 'menesa_plani': veikala_dati['menesa_plani'],
                 'izpildes_procenti': veikala_dati['izpildes_procenti'],
@@ -114,16 +120,16 @@ class SutitMenesaAtskaiti(CronJobBase):
             sanemeju_epasti = [lietotajs.email for lietotajs in vaditaji if lietotajs.email]
 
             if sanemeju_epasti:
-                print(f"Nosūta mēneša kopsavilkuma e-pastu veikalam {veikals.nosaukums} uz {sanemeju_epasti}")
+                print(f"Nosūta mēneša kopsavilkuma e-pastu veikalam {veikals.name} uz {sanemeju_epasti}")
                 send_mail(
-                    subject=f'Mēneša kopsavilkums - {veikals.nosaukums} - {veikala_dati["menesis_nosaukums"]} {today.year}',
+                    subject=f'Mēneša kopsavilkums - {veikals.name} - {veikala_dati["menesis_nosaukums"]} {today.year}',
                     message=teksta_zinojums,
                     from_email=None,  # Izmanto DEFAULT_FROM_EMAIL
                     recipient_list=sanemeju_epasti,
                     html_message=html_zinojums,
                     fail_silently=False,
                 )
-                print(f"Mēneša kopsavilkuma e-pasts veiksmīgi nosūtīts veikalam {veikals.nosaukums}")
+                print(f"Mēneša kopsavilkuma e-pasts veiksmīgi nosūtīts veikalam {veikals.name}")
             else:
-                print(f"Nav e-pasta adrešu vadītājiem veikalam {veikals.nosaukums}")
+                print(f"Nav e-pasta adrešu vadītājiem veikalam {veikals.name}")
 

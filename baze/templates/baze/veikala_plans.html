@@ -3,10 +3,10 @@
 {% block content %}
 
 <div class="container mt-4">
-    {% if veikals %}
+    {% if store %}
     <div class="row mb-4">
         <div class="col-12">
-            <h2 class="bg-light d-inline-block">{{ veikals.nosaukums }} — Veikala plāna progress</h2>
+            <h2 class="bg-light d-inline-block">{{ store.name }} — Veikala plāna progress</h2>
         </div>
     </div>
 
@@ -37,7 +37,7 @@
                                     <td class="text-center">{{ row.izpilde }}</td>
                                     <td class="text-center">{{ row.plans }}</td>
                                     <td class="text-center">
-                                        <span class="badge {% if row.progress >= 50 %}bg-success{% else %}bg-warning{% endif %}">
+                                        <span class="badge {% if row.progress >= paredzetais_progress %}bg-success{% else %}bg-warning{% endif %}">
                                             {{ row.progress }}%
                                         </span>
                                     </td>
@@ -142,7 +142,7 @@
                                 </tr>
                                 <tr>
                                     <td><strong>Apdrošināšanas proporcija</strong></td>
-                                    <td class="text-center">{{ veikala_proporcijas.apdr_iekartas|default:"0" }} / {{ veikala_izpilde.iekartas|default:"0"|add:veikala_izpilde.viedpaligi|default:"0" }}</td>
+                                    <td class="text-center">{{ veikala_proporcijas.apdr_iekartas|default:"0" }} / {{ veikala_izpilde.devices|default:"0"|add:veikala_izpilde.gadgets|default:"0" }}</td>
                                     <td class="text-center">{{ veikala_proporcijas.apdr_proporcija|default:"0" }}%</td>
                                     <td class="text-center">{{ veikala_proporcijas.apdr_plans|default:"0" }}%</td>
                                 </tr>
@@ -171,7 +171,7 @@
     {% endif %}
 
     {% else %}
-    <div class="alert alert-warning" role="alert">
+    <div class="alert alert-info" role="alert">
         Nav pieejamu veikala datu.
     </div>
     {% endif %}

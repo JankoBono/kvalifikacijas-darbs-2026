@@ -4,9 +4,9 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
-from .models import Darijums, Plans, UserVeikals, Menesis
+from .models import StoreRecord, Plan, UserStore, Month
 from .utils import aprekina_veikala_dienas_datus, apreikina_paredzeto_progresu, aprekina_menesus_intervala, veido_grafiku, aprekina_ind_lig_proporcijas, aprekina_ind_darijumus, individualie_dati, aprekina_veikala_datus, veikala_grafika_dati, izveido_perioda_tekstu
-from .forms import DarijumsForm, PlansForm
+from .forms import StoreRecordForm, PlanForm
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import calendar
@@ -68,28 +68,27 @@ def index(request):
         HTTP atbildes objektu ar galveno lapu un kontekstu
     """
     try:
-        lietotaja_veikals = UserVeikals.objects.get(user=request.user).veikals
+        lietotaja_veikals = UserStore.objects.get(user=request.user).store
 
         # Iegūst veikala dienas datus
         veikala_dati = aprekina_veikala_dienas_datus(lietotaja_veikals)
 
         # Aprēķina individuālos darījumus priekš katra kolēģa individuālās tabulas
         ind_darijumi = aprekina_ind_darijumus(lietotaja_veikals)
-        
+
         context = {
             'visi_summa': veikala_dati['visi_summa'],
             'dienas_merkis': veikala_dati['dienas_merkis'],
-            'ind_darijumi': ind_darijumi
+            'ind_darijumi': ind_darijumi,
+            'has_store': True,
         }
-        
-    except UserVeikals.DoesNotExist:
+
+    except UserStore.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
         context = {
-            'visi_summa': {},
-            'dienas_merkis': {},
-            'ind_darijumi': [],
+            'has_store': False,
         }
-    
+
     return render(request, 'baze/home.html', context)
 
 @login_required
@@ -103,14 +102,14 @@ def addDarijums(request):
     Atgriež:
         HTTP atbildes objektu ar darījumu pievienošanas lapu vai pāradresāciju uz galveno lapu pēc veiksmīgas darījuma pievienošanas
     """
-    form = DarijumsForm()
+    form = StoreRecordForm()
     if request.method == 'POST':
-        print(request.POST)
-        form = DarijumsForm(request.POST)
+        form = StoreRecordForm(request.POST)
         if form.is_valid():
             darijums_instance = form.save(commit=False)
-            darijums_instance.lietotajs = request.user
+            darijums_instance.user = request.user
             darijums_instance.save()
+            messages.success(request, "Darījums veiksmīgi pievienots!")
             return redirect('index')
 
     context = {'form': form}
@@ -128,13 +127,14 @@ def editDarijums(request, pk):
     Atgriež:
         HTTP atbildes objektu ar darījumu rediģēšanas lapu vai pāradresāciju uz darījumu sarakstu pēc veiksmīgas darījuma rediģēšanas
     """
-    darijums = Darijums.objects.get(id=pk)
-    form = DarijumsForm(instance=darijums)
+    darijums = StoreRecord.objects.get(id=pk)
+    form = StoreRecordForm(instance=darijums)
 
     if request.method == 'POST':
-        form = DarijumsForm(request.POST, instance=darijums)
+        form = StoreRecordForm(request.POST, instance=darijums)
         if form.is_valid():
             form.save()
+            messages.success(request, "Darījums veiksmīgi rediģēts!")
             return redirect('mani-darijumi')
 
     context = {'form' : form}
@@ -155,12 +155,12 @@ def deleteDarijums(request, pk):
     """
 
     try:
-        darijums = Darijums.objects.get(id=pk)
-        
+        darijums = StoreRecord.objects.get(id=pk)
+
         darijums.delete()
         messages.success(request, "Darījums veiksmīgi izdzēsts!")
 
-    except Darijums.DoesNotExist:
+    except StoreRecord.DoesNotExist:
         messages.error(request, "Darījums nav atrasts.")
 
     return redirect('mani-darijumi')
@@ -180,13 +180,22 @@ def maniDarijumi(request):
     today = date.today()
     menesa_sakums = today + relativedelta(day=1)
 
-    darijumi = Darijums.objects.filter(
-            lietotajs=user,
-            datums__date__gte=menesa_sakums,
-            datums__date__lte=today,
-        ).order_by('-datums')
+    darijumi = StoreRecord.objects.filter(
+            user=user,
+            date__date__gte=menesa_sakums,
+            date__date__lte=today,
+        ).order_by('-date')
+    
+    try:
+        veikals = UserStore.objects.get(user=user)
+    except UserStore.DoesNotExist:
+        veikals = None
+        messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
 
-    context = {'darijumi': darijumi}
+    context = {
+        'darijumi': darijumi,
+        'veikals': veikals,
+        }
     return render(request, 'baze/mani_darijumi.html', context)
 
 @login_required
@@ -203,12 +212,12 @@ def planuLapa(request):
     today = date.today()
     user = request.user
     try:
-        user_veikals = UserVeikals.objects.get(user=user)
-        veikals = user_veikals.veikals
-        plani = Plans.objects.filter(
-            lietotajs__userveikals__veikals=veikals,
-            menesis__menesis_id=today.month,
-            gads=today.year
+        lietotajs_veikals = UserStore.objects.get(user=user)
+        store = lietotajs_veikals.store
+        plani = Plan.objects.filter(
+            user__userstore__store=store,
+            month__month_id=today.month,
+            year=today.year
         )
 
         kopa_dienas = calendar.monthrange(today.year, today.month)[1]
@@ -219,12 +228,13 @@ def planuLapa(request):
 
         ind_progresa_dati, grafiki = individualie_dati(plani, palikusas_dienas, paredzetais_progress, user) 
 
-    except UserVeikals.DoesNotExist:
+    except UserStore.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
-        plani = Plans.objects.none()
+        plani = Plan.objects.none()
         grafiki = []
         ind_progresa_dati = []
         palikusas_dienas = 0
+        proporcijas = {}
 
     context = {
         'plani': plani,
@@ -247,10 +257,9 @@ def addPlans(request):
     Atgriež:
         HTTP atbildes objektu ar plānu pievienošanas lapu vai pāradresāciju uz plānu sarakstu pēc veiksmīgas plāna pievienošanas
     """
-    form = PlansForm(user=request.user)
+    form = PlanForm(user=request.user)
     if request.method == 'POST':
-        print(request.POST)
-        form = PlansForm(request.POST, user=request.user)
+        form = PlanForm(request.POST, user=request.user)
         if form.is_valid():
             plan = form.save(commit=False)
             plan.save()
@@ -273,13 +282,14 @@ def editPlans(request, pk):
     Atgriež:
         HTTP atbildes objektu ar plānu rediģēšanas lapu vai pāradresāciju uz plānu sarakstu pēc veiksmīgas plāna rediģēšanas
     """
-    plans = Plans.objects.get(id=pk)
-    form = PlansForm(instance=plans, user=request.user)
+    plans = Plan.objects.get(id=pk)
+    form = PlanForm(instance=plans, user=request.user)
 
     if request.method == 'POST':
-        form = PlansForm(request.POST, instance=plans, user=request.user)
+        form = PlanForm(request.POST, instance=plans, user=request.user)
         if form.is_valid():
             form.save()
+            messages.success(request, "Plāns veiksmīgi rediģēts!")
             return redirect('plani')
 
     context = {'form' : form}
@@ -299,11 +309,11 @@ def deletePlans(request, pk):
         HTTP atbildes objektu ar pāradresāciju uz plānu sarakstu pēc veiksmīgas plāna dzēšanas
     """
     try:
-        plans = Plans.objects.get(id=pk)
-        
+        plans = Plan.objects.get(id=pk)
+
         plans.delete()
         messages.success(request, "Plāns veiksmīgi izdzēsts!")
-    except Plans.DoesNotExist:
+    except Plan.DoesNotExist:
         messages.error(request, "Plāns nav atrasts.")
 
     return redirect('plani')
@@ -325,7 +335,7 @@ def veikalaPlans(request):
     # Iegūst pieejamos gadus un mēnešus izvēlnēm
     patreizejais_datums_gads = today.year
     gadi = list(range(patreizejais_datums_gads - 2, patreizejais_datums_gads + 1))
-    menesu_obj = Menesis.objects.all().values_list('menesis_id', 'nosaukums')
+    menesu_obj = Month.objects.all().values_list('month_id', 'name')
     
     # Iegūst datumu diapazonu no GET parametriem vai izmanto pašreizējo mēnesi un gadu
     sakuma_menesis = request.GET.get('sakuma_menesis', str(today.month))
@@ -361,21 +371,21 @@ def veikalaPlans(request):
     paredzetais_progress = apreikina_paredzeto_progresu(sakuma_datums, beigu_datums)
 
     try:
-        user_veikals = UserVeikals.objects.get(user=user)
-        veikals = user_veikals.veikals
-        
+        lietotajs_veikals = UserStore.objects.get(user=user)
+        store = lietotajs_veikals.store
+
         menesi_intervala = aprekina_menesus_intervala(sakuma_datums, beigu_datums)
                 
-        veikala_plans, veikala_izpilde, veikala_proporcijas = aprekina_veikala_datus(veikals, menesi_intervala)
+        veikala_plans, veikala_izpilde, veikala_proporcijas = aprekina_veikala_datus(store, menesi_intervala)
 
         kategorijas = ["Pieslēgumi", "Iekārtas", "Viedpalīgi", "Aksesuāri", "Viedtelevīzija"]
 
         tabulas_dati, planotais, realais, progress = veikala_grafika_dati(veikala_plans, veikala_izpilde, kategorijas)
 
-        grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, f"{veikals.nosaukums} — mēneša progress ({perioda_tesks})")
+        grafiks = veido_grafiku(paredzetais_progress, realais, planotais, progress, kategorijas, f"{store.name} — mēneša progress ({perioda_tesks})")
                 
         context = {
-            'veikals': veikals,
+            'store': store,
             'tabulas_dati': tabulas_dati,
             'chart': grafiks,
             'paredzetais_progress': round(paredzetais_progress, 1),
@@ -390,11 +400,11 @@ def veikalaPlans(request):
             'veikala_izpilde': veikala_izpilde,
         }
         
-    except UserVeikals.DoesNotExist:
+    except UserStore.DoesNotExist:
         messages.warning(request, "Jūsu lietotājam nav piešķirts veikals.")
         
         context = {
-            'veikals': None,
+            'store': None,
             'tabulas_dati': [],
             'chart': None,
             'paredzetais_progress': 0,
@@ -404,8 +414,8 @@ def veikalaPlans(request):
             'beigu_gads': today.year,
             'menesi': menesu_obj,
             'gadi': gadi,
-            'veikala_proporcijas' : veikala_proporcijas,
-            'veikala_izpilde': veikala_izpilde,
+            'veikala_proporcijas' : [],
+            'veikala_izpilde': [],
         }
     
     return render(request, 'baze/veikala_plans.html', context)

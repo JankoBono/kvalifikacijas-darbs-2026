@@ -1,23 +1,24 @@
+from django import forms
 from django.forms import ModelForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Darijums, Plans, UserVeikals
+from .models import StoreRecord, Plan, UserStore
 
 User = get_user_model()
-class DarijumsForm(ModelForm):
+class StoreRecordForm(ModelForm):
     class Meta:
-        model = Darijums
-        exclude = ('lietotajs', 'datums',)
+        model = StoreRecord
+        exclude = ('user', 'date',)
 
         labels = {
-                'pieslegums': 'Pieslēgums',
-                'atv_iekarta': 'Atvērtā iekārta',
-                'nom_iekarta': 'Nomaksas iekārta',
-                'pil_iekarta': 'Pilnas cenas iekārta',
-                'viedpaligs': 'Viedpalīgs',
-                'apdr_iekartas': 'Apdrošināta iekārta',
-                'aksesuars': 'Aksesuārs',
-                'viedtelevizija': 'Viedtelevīzija',
+                'service': 'Pieslēgums',
+                'open_device': 'Atvērtā iekārta',
+                'installment_device': 'Nomaksas iekārta',
+                'full_price_device': 'Pilnas cenas iekārta',
+                'gadget': 'Viedpalīgs',
+                'insured_devices': 'Apdrošināta iekārta',
+                'accessory': 'Aksesuārs',
+                'smart_tv': 'Viedtelevīzija',
             }
 
     def __init__(self, *args, **kwargs):
@@ -38,8 +39,8 @@ class DarijumsForm(ModelForm):
         derigi_dati = super().clean()
 
         pozicijas = [
-            'pieslegums', 'atv_iekarta', 'nom_iekarta', 'pil_iekarta',
-            'viedpaligs', 'aksesuars', 'viedtelevizija'
+            'service', 'open_device', 'installment_device', 'full_price_device',
+            'gadget', 'accessory', 'smart_tv'
         ]
 
         for nosaukums in pozicijas:
@@ -60,21 +61,28 @@ class DarijumsForm(ModelForm):
 
         return derigi_dati
         
-class PlansForm(ModelForm):
+class PlanForm(ModelForm):
     class Meta:
-        model = Plans
+        model = Plan
         fields = '__all__'
         labels = {
-            'lietotajs': 'Lietotājs',
-            'pieslegumi': 'Pieslēgumi',
-            'iekartas': 'Iekārtas',
-            'viedpaligi': 'Viedpalīgi',
-            'aksesuari': 'Aksesuāri',
-            'atv_proporcija': 'Atvērtā līguma proporcija',
-            'apdr_proporcija': 'Apdrošināšanas proporcija',
-            'viedtelevizija': 'Viedtelevīzija',
-            'menesis': 'Mēnesis',
-            'gads': 'Gads',
+            'user': 'Lietotājs',
+            'services': 'Pieslēgumi',
+            'devices': 'Iekārtas',
+            'gadgets': 'Viedpalīgi',
+            'accessories': 'Aksesuāri',
+            'open_ratio': 'Atvērtā līguma proporcija',
+            'insurance_ratio': 'Apdrošināšanas proporcija',
+            'smart_tv': 'Viedtelevīzija',
+            'month': 'Mēnesis',
+            'year': 'Gads',
+        }
+        widgets = {
+            'user': forms.Select(attrs={
+                'class': 'form-control',
+                'oninvalid': "this.setCustomValidity('Lūdzu, izvēlieties lietotāju!')",
+                'oninput': "this.setCustomValidity('')"
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -83,14 +91,14 @@ class PlansForm(ModelForm):
 
         if user:
             try:
-                veikals = UserVeikals.objects.get(user=user).veikals
+                store= UserStore.objects.get(user=user).store
 
-                self.fields['lietotajs'].queryset = User.objects.filter(
-                    userveikals__veikals=veikals
+                self.fields['user'].queryset = User.objects.filter(
+                    userstore__store=store
                 )
 
-            except UserVeikals.DoesNotExist:
-                self.fields['lietotajs'].queryset = User.objects.none()
+            except UserStore.DoesNotExist:
+                self.fields['user'].queryset = User.objects.none()
 
         # Add Bootstrap classes to all fields
         for field in self.fields.values():
@@ -107,13 +115,13 @@ class PlansForm(ModelForm):
             kļūda tiek pievienota, ja validācija neizdodas.
         """
         derigi_dati = super().clean()
-        lietotajs = derigi_dati.get('lietotajs')
-        menesis = derigi_dati.get('menesis')
-        gads = derigi_dati.get('gads')
+        user= derigi_dati.get('user')
+        month= derigi_dati.get('month')
+        year= derigi_dati.get('year')
 
         pozicijas = [
-            'pieslegumi', 'iekartas', 'viedpaligi', 'aksesuari', 'viedtelevizija',
-            'atv_proporcija', 'apdr_proporcija'
+            'services', 'devices', 'gadgets', 'accessories', 'smart_tv',
+            'open_ratio', 'insurance_ratio'
         ]
 
         for field in pozicijas:
@@ -121,16 +129,16 @@ class PlansForm(ModelForm):
             if vertiba is not None and vertiba < 0:
                 self.add_error(field, 'Vērtība nevar būt negatīva.')
 
-        for prop_field in ['atv_proporcija', 'apdr_proporcija']:
+        for prop_field in ['open_ratio', 'insurance_ratio']:
             vertiba = derigi_dati.get(prop_field)
             if vertiba is not None and not (0 <= vertiba <= 1):
                 self.add_error(prop_field, 'Proporcijai jābūt starp 0 un 1.')
 
-        if lietotajs and menesis and gads:
-            eksiste = Plans.objects.filter(
-                lietotajs=lietotajs,
-                menesis=menesis,
-                gads=gads
+        if user and month and year:
+            eksiste = Plan.objects.filter(
+                user=user,
+                month=month,
+                year=year
             ).exclude(pk=self.instance.pk).exists()
 
             if eksiste:

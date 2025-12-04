@@ -3,10 +3,11 @@
 {% block content %}
 
 <div class="container mt-4">
+    {% if veikals %}
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Mani darījumi</h2>
+                <h2 class="bg-light">Mani darījumi</h2>
                 <div class="btn-group" role="group">
                     <a href="{% url 'add-darijums' %}" class="btn btn-primary">+ Pievienot darījumu</a>
                     <a href="{% url 'index' %}" class="btn btn-outline-secondary bg-light">Dienas lapa</a>
@@ -20,64 +21,64 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-header bg-light">
                             <small class="text-muted">
-                                Nr. {{ darijums.id }} / {{ darijums.datums|date:"d.m.Y H:i" }}
+                                Nr. {{ darijums.id }} / {{ darijums.date|date:"d.m.Y H:i" }}
                             </small>
                         </div>
                         <div class="card-body">
                             <ul class="list-unstyled mb-0">
-                                {% if darijums.pieslegums %}
+                                {% if darijums.service %}
                                 <li class="mb-2">
                                     <span>Pieslēgums:</span>
-                                    <strong>{{ darijums.pieslegums }}</strong>
+                                    <strong>{{ darijums.service }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.atv_iekarta %}
+                                {% if darijums.open_device %}
                                 <li class="mb-2">
                                     <span>Atvērtā iekārta:</span>
-                                    <strong>{{ darijums.atv_iekarta }}</strong>
+                                    <strong>{{ darijums.open_device }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.nom_iekarta %}
+                                {% if darijums.installment_device %}
                                 <li class="mb-2">
                                     <span>Nomaksas iekārta:</span>
-                                    <strong>{{ darijums.nom_iekarta }}</strong>
+                                    <strong>{{ darijums.installment_device }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.pil_iekarta %}
+                                {% if darijums.full_price_device %}
                                 <li class="mb-2">
                                     <span>Pilnas cenas iekārta:</span>
-                                    <strong>{{ darijums.pil_iekarta }}</strong>
+                                    <strong>{{ darijums.full_price_device }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.viedpaligs %}
+                                {% if darijums.gadget %}
                                 <li class="mb-2">
                                     <span>Viedpalīgs:</span>
-                                    <strong>{{ darijums.viedpaligs }}</strong>
+                                    <strong>{{ darijums.gadget }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.apdr_iekartas %}
+                                {% if darijums.insured_devices %}
                                 <li class="mb-2">
                                     <span>Apdrošināta iekārta:</span>
-                                    <strong>{{ darijums.apdr_iekartas }}</strong>
+                                    <strong>{{ darijums.insured_devices }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.aksesuars %}
+                                {% if darijums.accessory %}
                                 <li class="mb-2">
                                     <span>Aksesuārs:</span>
-                                    <strong>{{ darijums.aksesuars }}</strong>
+                                    <strong>{{ darijums.accessory }}</strong>
                                 </li>
                                 {% endif %}
 
-                                {% if darijums.viedtelevizija %}
+                                {% if darijums.smart_tv %}
                                 <li class="mb-2">
                                     <span>Viedtelevīzija:</span>
-                                    <strong>{{ darijums.viedtelevizija }}</strong>
+                                    <strong>{{ darijums.smart_tv }}</strong>
                                 </li>
                                 {% endif %}
                             </ul>
@@ -89,7 +90,7 @@
                             <a href="javascript:void(0);"
                                 class="btn btn-sm btn-outline-danger"
                                 data-id="{{ darijums.id }}"
-                                data-info="darījumu - Nr. {{ darijums.id }} / {{ darijums.datums|date:'d.m.Y H:i' }}"
+                                data-info="darījumu - Nr. {{ darijums.id }} / {{ darijums.date|date:'d.m.Y H:i' }}"
                                 data-url="{% url 'delete-darijums' darijums.id %}"
                                 onclick="openDeleteModal(this)">
                                 Dzēst
@@ -128,5 +129,9 @@
         </div>
     </div>
 </div>
-
+{% else %}
+    <div class="alert alert-info" role="alert">
+        Nav pieejamu darījumu datu.
+    </div>
+{% endif %}
 {% endblock %}

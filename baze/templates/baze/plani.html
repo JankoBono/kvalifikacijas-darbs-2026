@@ -67,7 +67,7 @@
                             <tbody>
                                 <tr>
                                     <td><strong>Atvērtā līguma proporcija</strong></td>
-                                    <td class="text-center">{{ proporcijas.atv_iekartas|default:"0" }} / {{ proporcijas.atv_iekartas|default:"0"|add:proporcijas.nom_iekarta|default:"0" }}</td>
+                                    <td class="text-center">{{ proporcijas.atv_iekartas|default:"0" }} / {{ proporcijas.atv_iekartas|default:"0"|add:proporcijas.nomaksas_iekartas|default:"0" }}</td>
                                     <td class="text-center">{{ proporcijas.atv_proporcija|default:"0" }}%</td>
                                     <td class="text-center">{{ proporcijas.atv_plans|default:"0" }}%</td>
                                 </tr>
@@ -92,7 +92,7 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">Veikala plāni</h4>
+                        <h4 class="mb-0">Pārdevēju plāni</h4>
                         <a href="{% url 'add-plans' %}" class="btn btn-light btn-sm">+ Pievienot plānu</a>
                     </div>
                 </div>
@@ -102,8 +102,8 @@
                         {% for plans in plani %}
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <span>
-                                <strong>{{ plans.lietotajs.first_name }} {{ plans.lietotajs.last_name }}</strong> —
-                                {{ plans.menesis }}/{{ plans.gads }}
+                                <strong>{{ plans.user.first_name }} {{ plans.user.last_name }}</strong> —
+                                {{ plans.month }}/{{ plans.year }}
                             </span>
                             <div class="btn-group btn-group-sm" role="group">
                                 {% if perms.baze.change_plans %}
@@ -113,7 +113,7 @@
                                 <a href="javascript:void(0);"
                                     class="btn btn-outline-danger"
                                     data-id="{{ plans.id }}"
-                                    data-info="plānu: {{ plans.lietotajs.first_name }} - {{ plans.menesis }}/{{ plans.gads }}"
+                                    data-info="plānu: {{ plans.user.first_name }} - {{ plans.month }}/{{ plans.year }}"
                                     data-url="{% url 'delete-plans' plans.id %}"
                                     onclick="openDeleteModal(this)">
                                     Dzēst
